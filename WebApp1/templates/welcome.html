@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="welcomeApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Your Bank</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script>var app = angular.module('welcomeApp', []);
+
+        app.controller('WelcomeController', function($scope) {
+            $scope.username = "John Doe"; // This should be dynamically set by your backend
+        });</script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+        .header {
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+            width: 100%;
+        }
+        .container {
+            padding: 20px;
+            flex-grow: 1;
+            margin-left: 220px; /* Adjusted for side menu */
+        }
+        .menu {
+            width: 200px;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        .menu a {
+            display: block;
+            text-decoration: none;
+            color: #55a2ee;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .logout-button {
+            display: block;
+            text-decoration: none;
+            color: white;
+            background-color: blue;
+            padding: 10px;
+            text-align: center;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        .welcome-message {
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body ng-controller="WelcomeController">
+    <div class="menu">
+        <a href="#">Transfers</a>
+        <a href="#">See Balance</a>
+        <a href="#">Account Details</a>
+        <a href="#">Support</a>
+        <a href="/logout" class="logout-button">Logout</a>
+    </div>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome to Your Bank</h1>
+        </div>
+        <div class="welcome-message">
+            <h2>Hello, {{ username }}!</h2>
+        </div>
+    </div>
+</body>
+</html>
