@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "WebApp2"
+		},
+		{
+			"path": "RLHelper"
 		}
 	],
 	"settings": {}
