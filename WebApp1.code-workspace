@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "RLHelper"
+		},
+		{
+			"path": "IH3A"
 		}
 	],
 	"settings": {}
