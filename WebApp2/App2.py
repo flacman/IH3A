@@ -3,6 +3,7 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ve
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
 import hashlib
+import time
 
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'  # Change this to a random secret
@@ -16,6 +17,9 @@ app.config['MYSQL_DB'] = 'your_database_name'
 mysql = MySQL(app)
 jwt = JWTManager(app)
 
+# In-memory cache to track login attempts
+login_attempts = {}
+
 @app.route('/')
 def loginForm():
     return render_template('login.html')
@@ -24,6 +28,12 @@ def loginForm():
 def login():
     username = request.form.get('username', None)
     password = request.form.get('password', None)
+    
+    # Check if the user is blocked
+    if username in login_attempts:
+        attempts, last_attempt_time = login_attempts[username]
+        if attempts >= 5 and time.time() - last_attempt_time < 5:
+            return jsonify({"msg": "The user is blocked"}), 403
     
     # Hash the password using SHA1
     password_hash = hashlib.sha1(password.encode()).hexdigest()
@@ -34,9 +44,18 @@ def login():
     account = cursor.fetchone()
     
     if account:
+        # Reset login attempts on successful login
+        if username in login_attempts:
+            del login_attempts[username]
         access_token = create_access_token(identity=username)
         return jsonify(access_token=access_token)
     else:
+        # Track login attempts
+        if username in login_attempts:
+            attempts, last_attempt_time = login_attempts[username]
+            login_attempts[username] = (attempts + 1, time.time())
+        else:
+            login_attempts[username] = (1, time.time())
         return jsonify({"msg": "Bad username or password"}), 401
 
 @app.route('/welcome', methods=['GET'])

@@ -1,9 +1,9 @@
 from flask import Flask, request, jsonify
+import mysql.connector
 import csv
 import hashlib
-import subprocess
-
-import mysql.connector
+import random
+from mysql.connector import pooling
 
 app = Flask(__name__)
 
@@ -22,63 +22,81 @@ db_config_2 = {
     'database': 'database2'
 }
 
-def connect_to_database(config):
-    return mysql.connector.connect(
-        host=config['host'],
-        user=config['user'],
-        password=config['password'],
-        database=config['database']
-    )
+# Connection pool configurations
+pool_config_1 = {
+    'pool_name': 'pool1',
+    'pool_size': 5,
+    **db_config_1
+}
+
+pool_config_2 = {
+    'pool_name': 'pool2',
+    'pool_size': 5,
+    **db_config_2
+}
+
+# Create connection pools
+pool_1 = pooling.MySQLConnectionPool(**pool_config_1)
+pool_2 = pooling.MySQLConnectionPool(**pool_config_2)
+
+# In-memory storage for CSV rows
+csv_rows = []
+
+def get_connection(pool):
+    return pool.get_connection()
+
+def init_db(pool, config):
+    conn = get_connection(pool)
+    cursor = conn.cursor()
+    cursor.execute(f"CREATE DATABASE IF NOT EXISTS {config['database']}")
+    cursor.execute(f"USE {config['database']}")
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(255) NOT NULL,
+            password_hash CHAR(40) NOT NULL
+        )
+    """)
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 def clear_user_table(cursor):
     cursor.execute("DELETE FROM user")
 
-def populate_user_table(cursor, csv_file):
+def read_csv_file(csv_file):
     with open(csv_file, 'r') as file:
         reader = csv.reader(file)
-        for row in reader:
-            username, password = row
-            password_hash = hashlib.sha1(password.encode()).hexdigest()
-            cursor.execute("INSERT INTO user (username, password_hash) VALUES (%s, %s)", (username, password_hash))
+        rows = list(reader)
+    return rows
+
+def populate_user_table(cursor, rows):
+    random.shuffle(rows)
+    selected_rows = rows[:10]  # Select up to 10 random rows
+
+    for row in selected_rows:
+        username, password = row
+        password_hash = hashlib.sha1(password.encode()).hexdigest()
+        cursor.execute("INSERT INTO user (username, password_hash) VALUES (%s, %s)", (username, password_hash))
 
 @app.route('/restart-database', methods=['POST'])
 def restart_database():
-    csv_file = request.json.get('csv_file')
-    if not csv_file:
-        return jsonify({"error": "CSV file path is required"}), 400
+    if not csv_rows:
+        return jsonify({"error": "CSV data not loaded"}), 500
 
-    for config in [db_config_1, db_config_2]:
-        conn = connect_to_database(config)
+    for pool, config in [(pool_1, db_config_1), (pool_2, db_config_2)]:
+        init_db(pool, config)  # Initialize the database
+        conn = get_connection(pool)
         cursor = conn.cursor()
         clear_user_table(cursor)
-        populate_user_table(cursor, csv_file)
+        populate_user_table(cursor, csv_rows)
         conn.commit()
         cursor.close()
         conn.close()
 
-    return jsonify({"message": "Databases restarted successfully"}), 200
-
-@app.route('/restart_apache', methods=['POST'])
-def restart_apache():
-    try:
-        result = subprocess.run(['net', 'stop', 'Apache2.4'], check=True, capture_output=True, text=True)
-        result = subprocess.run(['net', 'start', 'Apache2.4'], check=True, capture_output=True, text=True)
-        return jsonify({'status': 'success', 'message': 'Apache service restarted successfully.'})
-    except subprocess.CalledProcessError as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
-@app.route('/full_reset', methods=['POST'])
-def full_reset():
-    try:
-        # Restart databases
-        restart_database()
-        
-        # Restart Apache service
-        restart_apache()
-        
-        return jsonify({'status': 'success', 'message': 'Full reset completed successfully.'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+    return jsonify({"message": "Databases restarted and populated successfully"}), 200
 
 if __name__ == '__main__':
+    csv_file_path = 'path/to/your/csvfile.csv'  # Update this path to your CSV file
+    csv_rows = read_csv_file(csv_file_path)
     app.run(debug=True)
