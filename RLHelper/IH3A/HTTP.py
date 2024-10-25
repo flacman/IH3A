@@ -20,7 +20,7 @@ class HTTPQuery:
         # Merge default headers with provided headers
         final_headers = self.default_headers.copy()
 
-        # Replace ${USER} and ${PASS} in the post query
+        # Build the post query
         post_query = self.build_post_query(username, password)
 
         # Construct the full URL
@@ -38,7 +38,7 @@ class HTTPQuery:
         # Perform the HTTP request
         if self.use_post:
             if self.use_json:
-                response = requests.post(url, headers=final_headers, json=data)
+                response = requests.post(url, headers=final_headers, json=json.loads(data))
             else:
                 response = requests.post(url, headers=final_headers, data=data)
         else:
@@ -47,8 +47,16 @@ class HTTPQuery:
         # Check if the search string is in the response content
         if search_string in response.text:
             return True
-        else:
-            return False
+
+        # Check if an access token is set in the JSON response
+        try:
+            response_json = response.json()
+            if 'access_token' in response_json:
+                return True
+        except ValueError:
+            pass
+
+        return False
 
 # Example usage:
 # http_query = HTTPQuery(
@@ -60,4 +68,4 @@ class HTTPQuery:
 #     use_json=False
 # )
 # result = http_query.perform_query(username="myuser", password="mypassword", search_string="Welcome")
-# print(result)  # True if "Welcome" is in the response, False otherwise
+# print(result)  # True if "Welcome" is in the response or if an access token is set, False otherwise
