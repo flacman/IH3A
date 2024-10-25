@@ -1,5 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, session
-import mysql.connector
+from flask import Flask, request, render_template, redirect, url_for, session
+from flask_mysqldb import MySQL
+import MySQLdb.cursors
+import hashlib
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -10,7 +12,13 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax'
 )
+# MySQL configurations
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'your_mysql_user'
+app.config['MYSQL_PASSWORD'] = 'your_mysql_password'
+app.config['MYSQL_DB'] = 'your_database_name'
 
+mysql = MySQL(app)
 # Database configuration
 db_config = {
     'user': 'app1',
@@ -32,15 +40,15 @@ def do_login():
     username = request.form['username']
     password = request.form['password']
     
-    """conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE username=%s AND password=%s', (username, password))
-    user = cursor.fetchone()
-    cursor.close()
-    conn.close()"""
-    user = 'admin'
+    # Hash the password using SHA1
+    password_hash = hashlib.sha1(password.encode()).hexdigest()
     
-    if user:
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    query = 'SELECT * FROM users WHERE username = %s AND password_hash = %s'
+    cursor.execute(query, (username, password_hash))
+    account = cursor.fetchone()
+    
+    if account:
         session['username'] = username
         return redirect(url_for('welcome'))
     else:
