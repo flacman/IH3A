@@ -85,6 +85,7 @@ def brute_force(u, p):
 if __name__ == "__main__":
     users = ["user1", "user2", "user3"]  # Add more users as needed
     passwords = ["pass1", "pass2", "pass3"]  # Add more passwords as needed
+    #to password spray, send the parameters in the opposite order
     success = brute_force(users, passwords)
     if success:
         print("Valid credentials found!")
