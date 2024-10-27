@@ -12,27 +12,54 @@ passwords = []
     #global index to see how many tries have been made
 index:int = 0
 
+# Function to read user list from a file
+def read_user_list(file_path, delimiter=None, password_list=None):
+    users = []
+    passwords = []
+    with open(file_path, 'r') as file:
+        for line in file:
+            line = line.strip()
+            if delimiter and not password_list:
+                user, password = line.split(delimiter)
+                users.append(user)
+                passwords.append(password)
+            else:
+                users.append(line)
+    return users, passwords
+
+# Function to read password list from a file
+def read_password_list(file_path):
+    passwords = []
+    with open(file_path, 'r') as file:
+        for line in file:
+            passwords.append(line.strip())
+    return passwords
+
 def getPass():
     user = None
     password = None
+    #we don't have more users or passwords
     if (passIndex >= passwords.count() or users.Count == 0):
         user= None
         password = None
         return user, password
     
-    password = users[passIndex]
+    #get the next password and update the index for the next thread
+    password = passwords[passIndex]
     passIndex += 1
+
     #the last one
+    #todo: check if this is correct or it should be passIndex == passwords.count()-1
     if (passIndex == passwords.count()):
     
         passIndex = 0
         user=users.pop()
-    else:
+    else: #replacement for peek
         user = users.pop()
         users.put(user)
     return user, password
 
-#could be used if there's an error with the actual user
+#could be used by external functions if there's an error with the actual user and you need to skip to the next one
 def tryNextUser():
     passIndex = passwords.count()-1
 
@@ -62,7 +89,9 @@ def worker(users, passwords):
             break
 
 # Main function to manage threads
-def brute_force(u, p):
+def brute_force(u, p, passwordSpray = False):
+    if passwordSpray:
+        u, p = p, u
     
     index = 0
     users = queue.Queue()
@@ -83,10 +112,15 @@ def brute_force(u, p):
 
 # Example usage
 if __name__ == "__main__":
-    users = ["user1", "user2", "user3"]  # Add more users as needed
-    passwords = ["pass1", "pass2", "pass3"]  # Add more passwords as needed
-    #to password spray, send the parameters in the opposite order
-    success = brute_force(users, passwords)
+    user_file = "users.txt"  # Path to the user list file
+    password_file = "passwords.txt"  # Path to the password list file
+    delimiter = None  # Set to a delimiter if the user file contains user[delimiter]password pairs
+
+    users, passwords = read_user_list(user_file, delimiter)
+    if not passwords:  # If passwords were not read from the user file
+        passwords = read_password_list(password_file)
+    
+    success = brute_force(users, passwords, False)
     if success:
         print("Valid credentials found!")
     else:
