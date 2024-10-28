@@ -81,12 +81,12 @@ def worker(users, passwords):
         index = index + 1
    
    
-    for user, password in product(users, passwords):
-        if found_event.is_set():
-            break
-        if HTTP.make_request(user, password):  # Assuming this function returns True on success
-            found_event.set()
-            break
+#    for user, password in product(users, passwords):
+#        if found_event.is_set():
+#            break
+#        if HTTP.make_request(user, password):  # Assuming this function returns True on success
+#            found_event.set()
+#            break
 
 # Main function to manage threads
 def brute_force(u, p, passwordSpray = False):
