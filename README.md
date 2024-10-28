@@ -54,3 +54,21 @@ Helper for the IH3A. This helper is composed of 2 apps:\
     **Challenges:**\
     1. Build a complete playground for IH3A. As complete as possible so he can learn different *real-life* configurations\
     2. Build a playground for different types of attacks. In this case, we are trying just brute force attacks, but more could be done\
+
+
+## Related Sources
+
+* https://openreview.net/pdf?id=m5AntlhJ7Z5
+* https://dl.acm.org/doi/pdf/10.1145/3471621.3471841
+* https://www.isecure-journal.com/article_148227_81815277f7b0dd99a9ba4a178adcf647.pdf
+* https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9720473
+* https://arxiv.org/pdf/2406.07561
+
+## Not related but useful
+
+* https://ieeexplore.ieee.org/abstract/document/8835247?casa_token=1AI0P_cnYlwAAAAA:OLXFVYUKLkHoAdOSE4m1Hv237YBKPzT54cPtTDtH_Maj5aFQbxa-ODj8KcXtaEZ0j-PTHqA
+* https://www.usenix.org/conference/usenixsecurity23/presentation/islam
+* https://arxiv.org/pdf/1905.05965
+* https://dl.acm.org/doi/abs/10.1145/3341105.3373962
+* https://arxiv.org/pdf/2406.05590
+* https://github.com/cage-challenge/CybORG
