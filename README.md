@@ -1,6 +1,19 @@
 # IH3A
 
-The whole system is composed by 3 sections:
+In this project, we present an innovative framework designed to train and build intelligent agents capable of evading network detection. Our approach focuses on dynamic parameter adjustments, success optimization, and stealthy evasion. By harnessing adaptive learning techniques, we aim to revolutionize the field of network security.
+
+To train these agents, we propose a framework where various types of attacks can be performed, and immediate responses can be received from different defensive technologies. The proposed training schema consists of three main layers:\
+
+**1. The Client:** This layer handles the execution of attacks. It includes the agent itself and tools to manage the environment and provide feedback to reinforce the agent's learning. The agent may use standard reinforcement learning models, agentic AI frameworks, or other compound or RAG LLM implementations. For this project, we will develop a reinforcement learning (RL) agent using policy-optimization models.
+
+**2. The Defensive Layer:** This layer encompasses most defensive mechanisms. The framework will allow notifications from defensive mechanisms via SysLog or API consumption. All tools should be configured to send messages to the Agent Helper properly. This information is used by the Agent Helper to provide feedback to the agent. For this project, we will use OSSEC, Suricata, and ModSecurity.
+
+**3. The Testing Layer:** This layer hosts a potential victim network, used to simulate attacks by the agent.
+
+
+![Alt text](NetDiagram.png?raw=true "Title")
+
+Our implementation for testing is composed by 3 sections:
 
 ## IH3A Agent:
 Intelligent Hacking Auto Attacking Agent: In charge of dealing with the attacks an learning.\
