@@ -39,7 +39,7 @@ def login():
     password_hash = hashlib.sha1(password.encode()).hexdigest()
     
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    query = 'SELECT * FROM users WHERE username = %s AND password_hash = %s'
+    query = 'SELECT * FROM user WHERE username = %s AND password_hash = %s'
     cursor.execute(query, (username, password_hash))
     account = cursor.fetchone()
     
@@ -77,4 +77,4 @@ def protected():
     return jsonify(logged_in_as=current_user), 200
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=8082, debug=True)

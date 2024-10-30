@@ -14,9 +14,9 @@ app.config.update(
 )
 # MySQL configurations
 app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'your_mysql_user'
-app.config['MYSQL_PASSWORD'] = 'your_mysql_password'
-app.config['MYSQL_DB'] = 'your_database_name'
+app.config['MYSQL_USER'] = 'user1'
+app.config['MYSQL_PASSWORD'] = 'password1'
+app.config['MYSQL_DB'] = 'database1'
 
 mysql = MySQL(app)
 # Database configuration
@@ -44,7 +44,7 @@ def do_login():
     password_hash = hashlib.sha1(password.encode()).hexdigest()
     
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    query = 'SELECT * FROM users WHERE username = %s AND password_hash = %s'
+    query = 'SELECT * FROM user WHERE username = %s AND password_hash = %s'
     cursor.execute(query, (username, password_hash))
     account = cursor.fetchone()
     
@@ -67,4 +67,4 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=8081, debug=True)

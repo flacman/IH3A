@@ -73,6 +73,10 @@ def read_csv_file(csv_file):
 def populate_user_table(cursor, rows):
     random.shuffle(rows)
     selected_rows = rows[:10]  # Select up to 10 random rows
+    
+    #print out what credentials are used for personal testing
+    print("Credentials:\n")
+    print(selected_rows)
 
     for row in selected_rows:
         username, password = row
@@ -97,6 +101,6 @@ def restart_database():
     return jsonify({"message": "Databases restarted and populated successfully"}), 200
 
 if __name__ == '__main__':
-    csv_file_path = 'path/to/your/csvfile.csv'  # Update this path to your CSV file
+    csv_file_path = 'credentials.csv'  # Update this path to your CSV file
     csv_rows = read_csv_file(csv_file_path)
     app.run(debug=True)

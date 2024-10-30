@@ -112,8 +112,8 @@ def brute_force(u, p, passwordSpray = False):
 
 # Example usage
 if __name__ == "__main__":
-    user_file = "users.txt"  # Path to the user list file
-    password_file = "passwords.txt"  # Path to the password list file
+    user_file = "../Data/users.txt"  # Path to the user list file
+    password_file = "../Data/passwords.txt"  # Path to the password list file
     delimiter = None  # Set to a delimiter if the user file contains user[delimiter]password pairs
 
     users, passwords = read_user_list(user_file, delimiter)
