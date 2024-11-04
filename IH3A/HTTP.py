@@ -45,6 +45,7 @@ class HTTPQuery:
             response = requests.get(url, headers=final_headers, params=data)
 
         # Check if the search string is in the response content
+        print(response.text)
         if search_string in response.text:
             return True
 
