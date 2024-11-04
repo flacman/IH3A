@@ -10,9 +10,9 @@ app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'  # Change this to a random 
 
 # MySQL configurations
 app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'your_mysql_user'
-app.config['MYSQL_PASSWORD'] = 'your_mysql_password'
-app.config['MYSQL_DB'] = 'your_database_name'
+app.config['MYSQL_USER'] = 'user1'
+app.config['MYSQL_PASSWORD'] = 'password1'
+app.config['MYSQL_DB'] = 'database1'
 
 mysql = MySQL(app)
 jwt = JWTManager(app)
