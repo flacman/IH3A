@@ -94,45 +94,7 @@ class CustomEnv:
         self.current_user = next(self.users)
         self.current_password = next(self.passwords)
         return self.state
-    def request(
-            self,
-            method,
-            url,
-            params=None,
-            headers=None,
-            files=None,
-            stream: bool = False,
-            request_id: Optional[str] = None,
-            request_timeout: Optional[Union[float, Tuple[float, float]]] = None,
-        ) -> Tuple[Union[OpenAIResponse, Iterator[OpenAIResponse]], bool, str]:
-        try:
-            result = self.request_raw(
-                method.lower(),
-                url,
-                params=params,
-                supplied_headers=headers,
-                files=files,
-                stream=stream,
-                request_id=request_id,
-                request_timeout=request_timeout,
-            )
-            resp, got_stream = self._interpret_response(result, stream)
-            return resp, got_stream, self.api_key
-        except Exception:
-            sleep(25)
-            result = self.request_raw(
-                method.lower(),
-                url,
-                params=params,
-                supplied_headers=headers,
-                files=files,
-                stream=stream,
-                request_id=request_id,
-                request_timeout=request_timeout,
-            )
-            resp, got_stream = self._interpret_response(result, stream)
-            return resp, got_stream, self.api_key
-        
+
 class Agent:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
