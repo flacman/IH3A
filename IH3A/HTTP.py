@@ -34,15 +34,18 @@ class HTTPQuery:
             final_headers['Content-Type'] = 'application/json'
         else:
             data = post_query
-
-        # Perform the HTTP request
+        
+        # Perform the HTTP request using a session to handle cookies
+        session = requests.Session()
         if self.use_post:
             if self.use_json:
-                response = requests.post(url, headers=final_headers, json=json.loads(data))
+                response = session.post(url, headers=final_headers, json=json.loads(data), allow_redirects=True)
+                
             else:
-                response = requests.post(url, headers=final_headers, data=data)
+                response = session.post(url, headers=final_headers, data=data, allow_redirects=True)
+                    
         else:
-            response = requests.get(url, headers=final_headers, params=data)
+            response = session.get(url, headers=final_headers, params=data, allow_redirects=True)
 
         # Check if the search string is in the response content
         if search_string in response.text:
