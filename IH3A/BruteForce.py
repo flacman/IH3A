@@ -1,6 +1,10 @@
 import queue
 import threading
 from HTTP import HTTPQuery  # Import HTTPQuery class from HTTP.py
+import requests
+import time
+import subprocess
+
 
 lock = threading.Lock()
 found_event = threading.Event()
@@ -21,6 +25,7 @@ http_query_8081 = HTTPQuery(
     use_post=True,
     use_json=False
 )
+
 # Setup for the second app on port 8082
 http_query_8082 = HTTPQuery(
     host="http://127.0.0.1:8082",
@@ -29,9 +34,6 @@ http_query_8082 = HTTPQuery(
     use_post=True,
     use_json=False
 )
-
-# Use only 8081 for now
-http_query = http_query_8082
 
 # Thread-safe function to get the next unique username-password pair
 def getPass():
@@ -59,7 +61,80 @@ def getPass():
 
         return user, password
 
+#use curl command directly for 8081 as the HTTPQuery function doesn't quite work for logging into the app
+def perform_curl_login(username, password):
+    curl_command = [
+        "curl",
+        "-X", "POST",
+        "http://127.0.0.1:8081/login",
+        "-H", "Content-Type: application/x-www-form-urlencoded",
+        "-d", f"username={username}&password={password}"
+    ]
+
+    try:
+        # Execute the curl command
+        result = subprocess.run(curl_command, capture_output=True, text=True)
+        
+        # # Print the output
+        # print("Output:")
+        # print(result.stdout)
+        
+        # # Print any errors
+        # print("Errors (if any):")
+        # print(result.stderr)
+
+        # Check the result of the command
+        if result.returncode == 0:
+            print("Login request sent successfully.")
+            # Check if "welcome" is in the output to set the event
+            if "welcome" in result.stdout:
+                found_event.set()  # Signal that we found the welcome message
+                print("Found 'welcome' in response. Event is set.")
+            else:
+                print("'welcome' not found in response.")
+        else:
+            print(f"curl command failed with return code: {result.returncode}")
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
 def worker():
+    global index
+    while not found_event.is_set():
+        #user, password = getPass()
+        
+        user = "adejr12"
+        password = "Zbff315"
+        
+        if user is None or password is None:
+            break
+        
+        # Logging the current attempt clearly
+        print(f"Attempting login for username: {user} and password: {password}")
+
+        # Construct the post_query parameter for 8081
+        post_query = f"username={user}&password={password}"
+        
+        # Use http_query_8081 for sending login credentials
+        # if http_query_8081.perform_query(username=user, password=password, search_string="Welcome"):
+        #     found_event.set()
+        #     print(f"Found valid credentials at 8081: {user}:{password}")
+        #     return  # Exit the worker thread immediately on success
+        
+        perform_curl_login(user, password)
+
+        # Use http_query_8082 for another kind of check if needed
+        # Uncomment and adjust if you want to check 8082 as well
+        if http_query_8082.perform_query(username=user, password=password, search_string="Welcome"):
+            found_event.set()
+            print(f"Found valid credentials at 8082 for user: {user}")
+            return
+
+        with lock:
+            index += 1
+
+
+def worker2():
     global index
     while not found_event.is_set():
         user, password = getPass()
@@ -67,15 +142,36 @@ def worker():
         if user is None or password is None:
             break
         
-        #print("Attempting login for username:", user, "and password:", password)
         user = "adejr12"
         password = "Zbff315"
+        
         print("Attempting login for username:", user, "and password:", password)
-        if http_query.perform_query(username=user, password=password, search_string="Welcome"):
+
+        # Construct the post_query parameter for 8081 only
+        post_query = f"username={user}&password={password}"
+        
+        http_test = HTTPQuery(
+            host="http://127.0.0.1:8081",
+            default_headers={"Content-Type": "application/x-www-form-urlencoded"},
+            post_query=post_query,
+            path="/login",
+            use_post=True,
+            use_json=False
+        )
+
+        # Use http_query_8081 for sending login credentials
+        if http_test.perform_query(username=user, password=password, search_string="Welcome"):
             found_event.set()
-            print(f"Found valid credentials: {user}:{password}")
+            print(f"Found valid credentials at 8081: {user}:{password}")
             return  # Exit the worker thread immediately on success
         return
+        # Use http_query_8082 for another kind of check (if needed)
+        # Adjust the condition based on what you expect from 8082
+        # if http_query_8082.perform_query(username=user, password=password, search_string="Welcome"):
+        #     found_event.set()
+        #     print(f"Found valid credentials at 8082 for user: {user}")
+        #     return
+
         with lock:
             index += 1
 
