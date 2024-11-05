@@ -111,17 +111,14 @@ def worker():
         
         # Logging the current attempt clearly
         print(f"Attempting login for username: {user} and password: {password}")
-
-        # Construct the post_query parameter for 8081
-        post_query = f"username={user}&password={password}"
         
         # Use http_query_8081 for sending login credentials
-        # if http_query_8081.perform_query(username=user, password=password, search_string="Welcome"):
-        #     found_event.set()
-        #     print(f"Found valid credentials at 8081: {user}:{password}")
-        #     return  # Exit the worker thread immediately on success
-        
-        perform_curl_login(user, password)
+        if http_query_8081.perform_query(username=user, password=password, search_string="Welcome"):
+            found_event.set()
+            print(f"Found valid credentials at 8081: {user}:{password}")
+            return
+
+        #perform_curl_login(user, password)
 
         # Use http_query_8082 for another kind of check if needed
         # Uncomment and adjust if you want to check 8082 as well
