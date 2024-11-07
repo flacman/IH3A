@@ -34,7 +34,7 @@ class CustomEnv:
 
     def step(self, action):
         reward = 0
-
+        
         # Define actions
         if action == 0:
             # Thread wait x seconds

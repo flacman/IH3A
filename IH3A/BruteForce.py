@@ -187,6 +187,8 @@ def brute_force(u, p, passwordSpray=False):
     passwords = p
 
     threads = []
+    #Change from PS to PB each x seconds
+    
     for _ in range(50):  # Adjust the number of threads as needed
         thread = threading.Thread(target=worker)
         thread.start()

@@ -40,7 +40,6 @@ class HTTPQuery:
         if self.use_post:
             if self.use_json:
                 response = session.post(url, headers=final_headers, json=json.loads(data), allow_redirects=True)
-                
             else:
                 response = session.post(url, headers=final_headers, data=data, allow_redirects=True)
                     
