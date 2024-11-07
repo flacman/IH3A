@@ -34,7 +34,7 @@ class CustomEnv:
 
     def step(self, action):
         reward = 0
-        
+
         # Define actions
         if action == 0:
             # Thread wait x seconds
@@ -85,6 +85,7 @@ class CustomEnv:
 
         # Return the default state, reward, and done flag
         done = False  # Adjust if the environment has a terminal condition
+        reward = randomReward
         return self.state, reward, done
 
     def reset(self):
@@ -135,6 +136,20 @@ class Agent:
             self.model.fit(state, target_f, epochs=1, verbose=0)
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
+    tries = 0
+    def randomReward():
+        tries += 1
+        if(tries % 50 == 0):
+            intR = random.randint(0, 10)
+            if intR == 8:
+                return -10
+            elif intR == 9:
+                return 5
+            elif intR == 10:
+                return 10
+            else:
+                return 1
+        return 1
 
 if __name__ == "__main__":
     env = CustomEnv()
