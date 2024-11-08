@@ -16,6 +16,7 @@ class CustomEnv:
         # with open("../Data/100-passwords.txt", "r") as f:
         #     self.passwords = cycle([line.strip() for line in f])
         
+        #shorter list to make sure it actually does something
         self.users = cycle(["user1", "user2", "user3", "user4", "user5", "adejr12"])
         self.passwords = cycle(["pass1", "pass2", "pass3", "pass4", "pass5", "Zbff315"])
 
