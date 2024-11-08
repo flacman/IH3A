@@ -116,7 +116,7 @@ def worker():
         if http_query_8081.perform_query(username=user, password=password, search_string="Welcome"):
             found_event.set()
             print(f"Found valid credentials at 8081: {user}:{password}")
-            return
+            #return
 
         #perform_curl_login(user, password)
 

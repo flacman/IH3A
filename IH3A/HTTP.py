@@ -15,6 +15,50 @@ class HTTPQuery:
             return json.dumps({"username": username, "password": password})
         else:
             return f"username={username}&password={password}"
+    
+    #for the model, output whether or not we were able to login (success), the http status code and response text
+    def perform_query_verbose(self, username="", password="", search_string=""):
+        # Merge default headers with provided headers
+        final_headers = self.default_headers.copy()
+
+        # Build the post query
+        post_query = self.build_post_query(username, password)
+
+        # Construct the full URL
+        url = self.host
+        if self.path:
+            url = f"{self.host.rstrip('/')}/{self.path.lstrip('/')}"
+
+        # Determine the data to send based on use_json
+        if self.use_json:
+            data = post_query
+            final_headers['Content-Type'] = 'application/json'
+        else:
+            data = post_query
+        
+        # Perform the HTTP request using a session to handle cookies
+        session = requests.Session()
+        if self.use_post:
+            if self.use_json:
+                response = session.post(url, headers=final_headers, json=json.loads(data), allow_redirects=True)
+            else:
+                response = session.post(url, headers=final_headers, data=data, allow_redirects=True)
+                    
+        else:
+            response = session.get(url, headers=final_headers, params=data, allow_redirects=True)
+
+        # status_code = response.status_code
+        # status_code = response.status_code
+        if search_string in response.text:
+            return True, response.status_code, response.text
+        try:
+            response_json = response.json()
+            if 'access_token' in response_json:
+                return True, response.status_code, response.text
+        except ValueError:
+            pass
+        return False, response.status_code, response.text
+
 
     def perform_query(self, username="", password="", search_string=""):
         # Merge default headers with provided headers
