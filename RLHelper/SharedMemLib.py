@@ -31,7 +31,12 @@ class Mode(Enum):
 # Returns: String read from shared memory (only used in Mode.READ)
 # Note: This function is thread-safe, so it should be called with a thread
 def read_write_sharedMem(mode: Mode, toWrite: str = None):
-    shm_c = shared_memory.SharedMemory(MEM_BLOCK_NAME, False, MEM_BLOCK_SIZE)
+    
+    try:
+        shm_c = shared_memory.SharedMemory(MEM_BLOCK_NAME)
+    except FileNotFoundError:
+        shm_c = shared_memory.SharedMemory(create=True, size=MEM_BLOCK_SIZE, name=MEM_BLOCK_NAME)
+        
     return_value = None
     #for i in range(1000):
     # Acquire the semaphore lock

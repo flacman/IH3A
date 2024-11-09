@@ -53,38 +53,43 @@ def parse_ossec_message(message):
 
 def parse_suricata_message(message):
     suricata_pattern = re.compile(
-        r'<(?P<priority>\d+)>(?P<timestamp>\S+ \d+ \d+:\d+:\d+) (?P<hostname>\S+) suricata\[(?P<pid>\d+)\]: '
-        r'(?P<event_type>\S+): (?P<message>.+)'
+        r'<(?P<priority>\d+)>'           # Priority
+        r'(?P<version>\d+) '             # Version
+        r'(?P<timestamp>[^ ]+) '         # Timestamp
+        r'(?P<hostname>[^ ]+) '          # Hostname
+        r'(?P<app_name>[^ ]+) '          # App name
+        r'(?P<procid>[^ ]+) '            # Proc ID
+        r'(?P<msgid>[^ ]+) '             # Msg ID
+        r'(?P<structured_data>-|(\[.*?\])) '  # Structured data
+        r'(?P<message>.+)'               # Message
     )
     match = suricata_pattern.match(message)
     if match:
         priority = int(match.group('priority'))
         facility = priority // 8
         severity = priority % 8
-        timestamp = match.group('timestamp')
-        hostname = match.group('hostname')
-        pid = match.group('pid')
-        event_type = match.group('event_type')
-        message_content = match.group('message')
         return {
             'type': 'suricata',
             'facility': facility,
             'severity': severity,
-            'timestamp': timestamp,
-            'hostname': hostname,
-            'pid': pid,
-            'event_type': event_type,
-            'message': message_content
+            'version': match.group('version'),
+            'timestamp': match.group('timestamp'),
+            'hostname': match.group('hostname'),
+            'app_name': match.group('app_name'),
+            'procid': match.group('procid'),
+            'msgid': match.group('msgid'),
+            'structured_data': match.group('structured_data'),
+            'message': match.group('message')
         }
     return None
 
 # Function to parse a syslog message sent by ModSecurity and return a dictionary with the parsed fields
 # message: Syslog message to parse
 # Returns: Dictionary with the parsed fields, or None if the message is not in ModSecurity format
+
 def parse_modsecurity_message(message):
     modsecurity_pattern = re.compile(
-        r'<(?P<priority>\d+)>(?P<timestamp>\S+ \d+ \d+:\d+:\d+) (?P<hostname>\S+) modsecurity\[(?P<pid>\d+)\]: '
-        r'(?P<transaction_id>\S+): (?P<rule_id>\d+): (?P<severity>\d+): (?P<message>.+)'
+    r'<(?P<priority>\d+)>1 (?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}\+\d{2}:\d{2}) (?P<hostname>\S+) (?P<app_name>\S+) - - - (?P<message_content>.+)'
     )
     match = modsecurity_pattern.match(message)
     if match:
@@ -93,21 +98,17 @@ def parse_modsecurity_message(message):
         severity = priority % 8
         timestamp = match.group('timestamp')
         hostname = match.group('hostname')
-        pid = match.group('pid')
-        transaction_id = match.group('transaction_id')
-        rule_id = match.group('rule_id')
-        severity_level = match.group('severity')
-        message_content = match.group('message')
+        app_name = match.group('app_name')
+        #transaction_id = match.group('transaction_id')
+        message_content = match.group('message_content')
         return {
             'type': 'modsecurity',
             'facility': facility,
             'severity': severity,
             'timestamp': timestamp,
             'hostname': hostname,
-            'pid': pid,
-            'transaction_id': transaction_id,
-            'rule_id': rule_id,
-            'severity_level': severity_level,
+            'app_name': app_name,
+            #'transaction_id': transaction_id,
             'message': message_content
         }
     return None
@@ -116,39 +117,85 @@ def parse_modsecurity_message(message):
 # Returns: Dictionary with the parsed fields, or None if the message is not in any of the supported formats
 
 def parse_syslog_message(message):
-    parsed_message = parse_ossec_message(message)
-    if parsed_message is None:
-        parsed_message = parse_suricata_message(message)
-    if parsed_message is None:
-        parsed_message = parse_modsecurity_message(message)
-    if parsed_message is None:
-        logging.error(f"Failed to parse message: {message}")
-    return parsed_message
+    # Try parsing with each parser
+    parsers = [parse_ossec_message, parse_suricata_message, parse_modsecurity_message]
+    for parser in parsers:
+        parsed_message = parser(message)
+        if parsed_message:
+            return parsed_message
+    logging.error(f"Failed to parse message: {message}")
+    return None
 
-# Function to handle messages from the queue and write to shared memory
-# message_queue: Queue object containing messages
+def process_parsed_message(parsed_message):
+    str_to_write = None
+    if parsed_message['type'] == 'ossec':
+        str_to_write = f"OSSEC - Facility: {parsed_message['facility']}, Severity: {parsed_message['severity']}, Timestamp: {parsed_message['timestamp']}, Hostname: {parsed_message['hostname']}, Process: {parsed_message['process']}, PID: {parsed_message['pid']}, Rule ID: {parsed_message['rule_id']}, Level: {parsed_message['level']}, Description: {parsed_message['description']}, Message: {parsed_message['message']}"
+    elif parsed_message['type'] == 'suricata':
+        str_to_write = f"Suricata - Facility: {parsed_message['facility']}, Severity: {parsed_message['severity']}, Version: {parsed_message['version']}, Timestamp: {parsed_message['timestamp']}, Hostname: {parsed_message['hostname']}, App Name: {parsed_message['app_name']}, Proc ID: {parsed_message['procid']}, Msg ID: {parsed_message['msgid']}, Structured Data: {parsed_message['structured_data']}, Message: {parsed_message['message']}"
+    elif parsed_message['type'] == 'modsecurity':
+        str_to_write = f"ModSecurity - Facility: {parsed_message['facility']}, Severity: {parsed_message['severity']}, Timestamp: {parsed_message['timestamp']}, Hostname: {parsed_message['hostname']}, App Name: {parsed_message['app_name']}, Message: {parsed_message['message']}"
+
+    if str_to_write:
+        logging.info(str_to_write)
+        read_write_sharedMem(Mode.WRITE, str_to_write)
+
 def handle_message(message_queue):
+    message_buffer = []  # Buffer to hold messages between '-A--' and '-Z--'
+    collecting = False  # Flag to indicate if we are collecting messages
+
     while True:
         message = message_queue.get()
         if message is None:
             break
-        parsed_message = parse_syslog_message(message)
-        str_to_write = None
-        if parsed_message:
-            if parsed_message['type'] == 'ossec':
-                str_to_write = f"OSSEC - Facility: {parsed_message['facility']}, Severity: {parsed_message['severity']}, Timestamp: {parsed_message['timestamp']}, Hostname: {parsed_message['hostname']}, Process: {parsed_message['process']}, PID: {parsed_message['pid']}, Rule ID: {parsed_message['rule_id']}, Level: {parsed_message['level']}, Description: {parsed_message['description']}, Message: {parsed_message['message']}"
-                logging.info(str_to_write)
-                read_write_sharedMem(Mode.WRITE, str_to_write)
-            elif parsed_message['type'] == 'suricata':
-                str_to_write = f"Suricata - Facility: {parsed_message['facility']}, Severity: {parsed_message['severity']}, Timestamp: {parsed_message['timestamp']}, Hostname: {parsed_message['hostname']}, PID: {parsed_message['pid']}, Event Type: {parsed_message['event_type']}, Message: {parsed_message['message']}"
-                logging.info(str_to_write)
-                read_write_sharedMem(Mode.WRITE, str_to_write)
-            elif parsed_message['type'] == 'modsecurity':
-                str_to_write = f"ModSecurity - Facility: {parsed_message['facility']}, Severity: {parsed_message['severity']}, Timestamp: {parsed_message['timestamp']}, Hostname: {parsed_message['hostname']}, PID: {parsed_message['pid']}, Transaction ID: {parsed_message['transaction_id']}, Rule ID: {parsed_message['rule_id']}, Severity Level: {parsed_message['severity_level']}, Message: {parsed_message['message']}"
-                logging.info(str_to_write)
-                read_write_sharedMem(Mode.WRITE, str_to_write)
-        message_queue.task_done()
 
+        message = message.strip()
+
+        if '-A--' in message:
+            # Start of a new message block
+            collecting = True
+            message_buffer = []  # Reset buffer
+            mes = parse_modsecurity_message(message)
+            if mes:
+                message = mes['message'].replace('-A--', '').strip()
+                message_buffer =mes
+            # Remove '-A--' from the message
+            #message = message.replace('-A--', '').strip()
+            #if message:
+            #    message_buffer.append(message)
+
+        elif '-Z--' in message:
+            # End of the current message block
+            if collecting:
+                # Remove '-Z--' from the message
+                #mes = parse_modsecurity_message(message)
+                #if mes:
+                #    message = message['message'].replace('-Z--', '').strip()
+                #    message_buffer.append(message)
+                # Combine all buffered messages
+                
+                #full_message = '\n'.join(message_buffer.values())
+                # Split into individual messages if needed
+                
+                process_parsed_message(message_buffer)
+                # Reset buffer and collecting flag
+                message_buffer = []
+                collecting = False
+            else:
+                # Received '-Z--' without '-A--', ignore or log if necessary
+                logging.warning("Received end marker '-Z--' without start marker '-A--'.")
+
+        else:
+            # Regular message content
+            if collecting:
+                mes = parse_modsecurity_message(message)
+                if mes and message_buffer['message']:
+                    message_buffer['message']+=""+mes['message']
+            else:
+                # Not collecting, ignore or handle as per requirements
+                #logging.warning("Received message outside of '-A--' and '-Z--' markers.")
+                process_parsed_message(parse_syslog_message(message))
+
+        message_queue.task_done()
 
 def main():
     parser = argparse.ArgumentParser(description="Syslog server")
@@ -177,8 +224,8 @@ def main():
     try:
         while True:
             try:
-                data, addr = sock.recvfrom(1024)  # Buffer size is 1024 bytes
-                message = data.decode('utf-8')
+                data, addr = sock.recvfrom(4096)  # Increased buffer size if needed
+                message = data.decode('utf-8', errors='replace')
                 message_queue.put(message)
             except (socket.error, UnicodeDecodeError) as e:
                 logging.error(f"Failed to receive or decode message: {e}")
