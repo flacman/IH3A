@@ -41,14 +41,15 @@ def do_login():
     password = request.form['password']
     
     # Hash the password using SHA1
-    #password_hash = hashlib.sha1(password.encode()).hexdigest()
+    password_hash = hashlib.sha1(password.encode()).hexdigest()
     
-    #cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    #query = 'SELECT * FROM user WHERE username = %s AND password_hash = %s'
-    #cursor.execute(query, (username, password_hash))
-    #account = cursor.fetchone()
-    if username == 'adejr12' and password == 'Zbff315':
-        account = True
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    query = 'SELECT * FROM user WHERE username = %s AND password_hash = %s'
+    cursor.execute(query, (username, password_hash))
+    account = cursor.fetchone()
+    #account = False
+    #if username == 'adejr12' and password == 'Zbff315':
+        #account = True
 
     if account:
         session['username'] = username
@@ -69,4 +70,4 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    app.run(port=8081, debug=True)
+    app.run(port=8081, debug=True, host='0.0.0.0')

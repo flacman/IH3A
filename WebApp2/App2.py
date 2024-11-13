@@ -10,9 +10,9 @@ app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'  # Change this to a random 
 
 # MySQL configurations
 app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'user1'
-app.config['MYSQL_PASSWORD'] = 'password1'
-app.config['MYSQL_DB'] = 'database1'
+app.config['MYSQL_USER'] = 'user2'
+app.config['MYSQL_PASSWORD'] = 'password2'
+app.config['MYSQL_DB'] = 'database2'
 
 mysql = MySQL(app)
 jwt = JWTManager(app)
@@ -77,4 +77,4 @@ def protected():
     return jsonify(logged_in_as=current_user), 200
 
 if __name__ == '__main__':
-    app.run(port=8082, debug=True)
+    app.run(port=8082, debug=True, host='0.0.0.0')

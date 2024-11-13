@@ -66,7 +66,7 @@ def clear_user_table(cursor):
 
 def read_csv_file(csv_file):
     with open(csv_file, 'r') as file:
-        reader = csv.reader(file)
+        reader = csv.reader(file,delimiter=';')
         rows = list(reader)
     return rows
 
@@ -83,7 +83,7 @@ def populate_user_table(cursor, rows):
         password_hash = hashlib.sha1(password.encode()).hexdigest()
         cursor.execute("INSERT INTO user (username, password_hash) VALUES (%s, %s)", (username, password_hash))
 
-@app.route('/restart-database', methods=['POST'])
+@app.route('/restart-database', methods=['GET'])
 def restart_database():
     if not csv_rows:
         return jsonify({"error": "CSV data not loaded"}), 500
@@ -103,4 +103,4 @@ def restart_database():
 if __name__ == '__main__':
     csv_file_path = 'credentials.csv'  # Update this path to your CSV file
     csv_rows = read_csv_file(csv_file_path)
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=81, debug=True)
