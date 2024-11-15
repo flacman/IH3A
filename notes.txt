@@ -1,0 +1,48 @@
+For every machine: user: cse253, pass: cse253
+
+Before starting, check that your host vm have the IP 192.168.16.1
+(Edit/network editor)
+The agend should access always through 192.168.16.147
+To start the whole environment:
+	In Apps VM, run in different terminals the apps and the helper (ctrl+alt+f1, f2, f3, etc)
+	In your host, run just the syslog server (I didn't use the other one)
+	
+CHANGE: In SecProxy vm:
+	sudo nano /etc/suricata/suricata.yaml
+	change the line 
+		port-groups: 
+			HTTP_PORTS: "80"
+	to
+		port-groups:
+			HTTP_PORTS: "8081,8082"
+
+VM1: SecProxy
+IP: 192.168.16.147
+It's a reverse proxy for accessing the apps:
+	Mod_Security Config
+		/etc/apache2/modsecurity/crs-setup.conf
+		/etc/modsecurity/modsecurity.conf
+	Mod_proxy
+		Site: vulnerable.com.conf
+			Por 8081 Points to: 	http://192.168.16.146:8081
+			Por 8082 Points to:		http://192.168.16.146:8082
+	Suricata
+		/etc/suricata/suricata.yaml
+	Syslog
+		This will get logs on /var/log/modsecurity/error.log and /var/log/suricata.info.log and send them to 192.168.16.1
+		
+		/etc/syslogd/.conf
+
+VM1: Apps
+IP: 192.168.16.146
+Here is where the appss are:
+	Ossec Config
+		/var/ossec/etc/ossec.conf
+	
+	Apps
+		/home/App1/ (runs on port 8081)
+		/home/App2/ (runs on port 8082)
+		/home/RLHelper.py (runs on port 80)
+	MySQL
+		Access to database: sudo mysql
+		Users, passwords and databases are the same that are coded in the apps

@@ -3,6 +3,7 @@ import random
 import time
 from itertools import cycle
 from HTTP import HTTPQuery
+import threading
 
 class CustomEnv:
     def __init__(self):
@@ -32,6 +33,13 @@ class CustomEnv:
             use_json=False
         )
         
+        self.signal = threading.Event()
+        self.lock = threading.Lock()
+        self.indexUsrs = 0
+        self.indexPass_map = {i: 0 for i in range(len(self.users))}
+        self.PasswordSpray = False
+        self.total_pairs = len(self.users) * len(self.passwords)
+
         self.undetected_attempt_count = 0
         self.total_attempt_count = 0
         
@@ -42,6 +50,35 @@ class CustomEnv:
         self.gamma = 0.9
         self.time_penalty = 0
         self.lockout_prob = 0.05
+
+    def get_next_pair(self):
+        with self.lock:
+            while self.indexUsrs < len(self.users):
+                    if(self.indexPass_map[self.indexUsrs] < len(self.passwords)):
+                         break
+                    self.indexUsrs += 1
+                    if self.indexUsrs >= len(self.users):
+                        self.indexUsrs = 0
+            if(self.indexUsrs == len(self.users) or self.indexPass_map[self.indexUsrs] >= len(self.passwords)):
+                return None, None
+            if not self.PasswordSpray:
+                item1 = self.users[self.indexUsrs]
+                item2 = self.passwords[self.indexPass_map[self.indexUsrs]]
+                self.indexPass_map[self.indexUsrs] += 1
+                if self.indexPass_map[self.indexUsrs] >= len(self.passwords):
+                    self.indexUsrs += 1
+            else:
+                item1 = self.users[self.indexUsrs]
+                
+                
+                item2 = self.passwords[self.indexPass_map[self.indexUsrs]]
+
+                if self.indexUsrs >= len(self.users):
+                    self.indexUsrs = 0
+                    self.indexPass_map[self.indexUsrs] += 1
+
+            self.total_attempt_count += 1
+            return item1, item2
 
     def default_state(self):
         return (self.query_count, self.plan)
@@ -83,13 +120,18 @@ class CustomEnv:
             time.sleep(self.time_penalty)
         elif action == 1:
             print("Action: Skip user")
-            self.current_user = next(self.users)
+            self.indexUsrs += 1
         elif action == 2:
             print("Action: Try next password")
-            self.current_password = next(self.passwords)
+            username, password = self.get_next_pair()
+            if(username is None or password is None):
+                done = True
+                print("All username-password pairs exhausted.")
+                return self.state, reward+50, done
+            
             success, status_code, response_text = self.http_query.perform_query_verbose(
-                username=self.current_user,
-                password=self.current_password,
+                username=username,
+                password=password,
                 search_string="Welcome"
             )
             self.query_count += 1
@@ -113,7 +155,8 @@ class CustomEnv:
 
         elif action == 3:
             print("Action: Toggle brute force and password spray")
-            self.plan = "passwordSpray" if self.plan == "bruteForce" else "bruteForce"
+            #self.plan = "passwordSpray" if self.plan == "bruteForce" else "bruteForce"
+            self.change_traversal()
 
         state_idx = self.state_to_index(self.state)
         next_state_idx = self.state_to_index(self.default_state())
@@ -128,7 +171,11 @@ class CustomEnv:
         self.state = (self.query_count, self.plan)
         print(f"New state: {self.state}, Reward: {reward}, Done: {done}")
         return self.state, reward, done
-
+    
+    def change_traversal(self):
+        with self.lock:
+            self.PasswordSpray = not self.PasswordSpray
+            
     def state_to_index(self, state):
         return state[0] * 2 + (0 if state[1] == "bruteForce" else 1)
 
@@ -137,8 +184,11 @@ class CustomEnv:
         self.plan = "bruteForce"
         self.state = self.default_state()
         
-        self.current_user = next(self.users)
-        self.current_password = next(self.passwords)
+        self.indexUsrs = 0
+        self.indexPass_map = {i: 0 for i in range(len(self.users))}
+        self.PasswordSpray = False
+        self.total_pairs = len(self.users) * len(self.passwords)
+
         self.undetected_attempt_count = 0
         self.total_attempt_count = 0
         print("Environment reset.")
