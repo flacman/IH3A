@@ -149,7 +149,10 @@ class CustomEnv:
             reward -= 1
         elif action == 1:
             print("Action: Skip user")
-            self.indexUsrs += 1
+            
+            with self.lock:
+                self.users.append(self.users.pop(self.indexUsrs))
+            #self.indexUsrs += 1
         elif action == 2:
             print("Action: Try next password")
             username, password = self.get_next_pair()
