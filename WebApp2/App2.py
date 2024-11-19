@@ -26,13 +26,14 @@ def loginForm():
 
 @app.route('/login', methods=['POST'])
 def login():
-    username = request.form.get('username', None)
-    password = request.form.get('password', None)
+    data = request.get_json()
+    username = data.get('username', None)
+    password = data.get('password', None)
     
     # Check if the user is blocked
     if username in login_attempts:
         attempts, last_attempt_time = login_attempts[username]
-        if attempts >= 5 and time.time() - last_attempt_time < 5:
+        if attempts >= 5 and time.time() - last_attempt_time < 300:
             return jsonify({"msg": "The user is blocked"}), 403
     
     # Hash the password using SHA1

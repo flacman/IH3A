@@ -29,12 +29,12 @@ class HTTPQuery:
         if self.path:
             url = f"{self.host.rstrip('/')}/{self.path.lstrip('/')}"
 
+        data = post_query
         # Determine the data to send based on use_json
         if self.use_json:
-            data = post_query
             final_headers['Content-Type'] = 'application/json'
-        else:
-            data = post_query
+#        else:
+#            final_headers['Content-Type'] = 'application/x-www-form-urlencoded'
         
         # Perform the HTTP request using a session to handle cookies
         session = requests.Session()

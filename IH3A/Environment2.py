@@ -4,11 +4,12 @@ import time
 from itertools import cycle
 from HTTP import HTTPQuery
 import threading
+import SharedMemLib
 
 class CustomEnv:
     def __init__(self):
         self.query_count = 0
-        self.plan = "bruteForce"
+        self.PasswordSpray = False
         self.state = self.default_state()
 
         # # Load users and passwords from files
@@ -16,34 +17,39 @@ class CustomEnv:
         #     self.users = cycle([line.strip() for line in f])
         # with open("../Data/100-passwords.txt", "r") as f:
         #     self.passwords = cycle([line.strip() for line in f])
-        
-        #shorter list to make sure it actually does something
-        self.users = cycle(["user1", "user2", "user3", "user4", "user5", "adejr12"])
-        self.passwords = cycle(["pass1", "pass2", "pass3", "pass4", "pass5", "Zbff315"])
 
-        self.current_user = next(self.users)
-        self.current_password = next(self.passwords)
+        #shorter list to make sure it actually does something
+        self.users = []
+        self.passwords = []
+
+        #self.current_user = next(self.users)
+        #self.current_password = next(self.passwords)
         
+        #self.http_query = HTTPQuery(
+        #    host="http://192.168.16.147:8081",
+        #    default_headers={"Content-Type": "application/x-www-form-urlencoded"},
+        #    post_query="username=${USER}&password=${PASS}",
+        #    path="/login",
+        #    use_post=True,
+        #    use_json=False
+        #)
         self.http_query = HTTPQuery(
-            host="http://127.0.0.1:8082",
-            default_headers={"Content-Type": "application/x-www-form-urlencoded"},
-            post_query="username=${USER}&password=${PASS}",
+            host="http://192.168.16.147:8082",
             path="/login",
             use_post=True,
-            use_json=False
+            use_json=True
         )
-        
         self.signal = threading.Event()
         self.lock = threading.Lock()
         self.indexUsrs = 0
         self.indexPass_map = {i: 0 for i in range(len(self.users))}
-        self.PasswordSpray = False
         self.total_pairs = len(self.users) * len(self.passwords)
 
         self.undetected_attempt_count = 0
         self.total_attempt_count = 0
         
         # Q-learning parameters
+
         self.q_table = np.zeros((100, 4))
         self.epsilon = 1.0
         self.alpha = 0.1
@@ -51,7 +57,29 @@ class CustomEnv:
         self.time_penalty = 0
         self.lockout_prob = 0.05
 
+    # Function to read user list from a file
+    def read_user_list(self,file_path, delimiter=None, password_list=None):
+        with open(file_path, 'r') as file:
+            for line in file:
+                line = line.strip()
+                if delimiter and not password_list:
+                    user, password = line.split(delimiter)
+                    self.users.append(user)
+                    self.passwords.append(password)
+                else:
+                    self.users.append(line)
+        return self.users, self.passwords
+
+    # Function to read password list from a file
+    def read_password_list(self,file_path):
+
+        with open(file_path, 'r') as file:
+            for line in file:
+                self.passwords.append(line.strip())
+        return self.passwords
+
     def get_next_pair(self):
+        
         with self.lock:
             while self.indexUsrs < len(self.users):
                     if(self.indexPass_map[self.indexUsrs] < len(self.passwords)):
@@ -81,7 +109,7 @@ class CustomEnv:
             return item1, item2
 
     def default_state(self):
-        return (self.query_count, self.plan)
+        return (self.query_count, self.PasswordSpray)
 
     def choose_action(self, state):
         if random.uniform(0, 1) < self.epsilon:
@@ -102,7 +130,7 @@ class CustomEnv:
         )
         if success_rate < 0.5:
             self.lockout_prob = min(self.lockout_prob * 1.1, 0.5)
-            self.time_penalty = min(self.time_penalty + 1, 6)
+            self.time_penalty = min(self.time_penalty + 1, 5)
         else:
             self.lockout_prob = max(self.lockout_prob * 0.9, 0.01)
             self.time_penalty = max(self.time_penalty - 1, 0)
@@ -118,6 +146,7 @@ class CustomEnv:
         if action == 0:
             print("Action: Wait")
             time.sleep(self.time_penalty)
+            reward -= 1
         elif action == 1:
             print("Action: Skip user")
             self.indexUsrs += 1
@@ -134,29 +163,32 @@ class CustomEnv:
                 password=password,
                 search_string="Welcome"
             )
+            reward += self.determine_reward_from_response(success, status_code, response_text)
+
             self.query_count += 1
             self.total_attempt_count += 1
 
-            if random.uniform(0, 1) < self.lockout_prob:
-                status_code = 403
+            #if random.uniform(0, 1) < self.lockout_prob:
+            #    status_code = 403
 
             if success:
-                reward += 10
+                reward += 100
                 done = True
                 print("Login successful!")
             elif status_code == 403:
-                reward -= 10
+                reward -= 5
                 print("Lockout detected (403).")
                 time.sleep(self.time_penalty)
             else:
                 reward += 1
                 self.undetected_attempt_count += 1
-                print("Attempt failed without lockout.")
+                print(f"Attempt failed without lockout. {self.undetected_attempt_count} undetected attempts.")
 
         elif action == 3:
             print("Action: Toggle brute force and password spray")
-            #self.plan = "passwordSpray" if self.plan == "bruteForce" else "bruteForce"
             self.change_traversal()
+        #todo: read from shared memory, if there's a message, then reward -= 15
+        self.read_write_sharedMem()
 
         state_idx = self.state_to_index(self.state)
         next_state_idx = self.state_to_index(self.default_state())
@@ -168,7 +200,7 @@ class CustomEnv:
 
         self.adjust_epsilon()
 
-        self.state = (self.query_count, self.plan)
+        self.state = (self.query_count, self.PasswordSpray)
         print(f"New state: {self.state}, Reward: {reward}, Done: {done}")
         return self.state, reward, done
     
@@ -177,11 +209,31 @@ class CustomEnv:
             self.PasswordSpray = not self.PasswordSpray
             
     def state_to_index(self, state):
-        return state[0] * 2 + (0 if state[1] == "bruteForce" else 1)
+        index = state[0] * 2 + (0 if state[1] == False else 1)
+        return index if index < 100 else 99
+
+    def determine_reward_from_response(self, success, status_code, response_text):
+        reward = 0
+        #Default mod_security resopnse
+        if "forbidden" in response_text.lower():
+            reward -= 15
+        elif "blocked" in response_text.lower():
+            reward -= 10
+
+        if success:
+            reward += 1
+        return reward
+
+    def read_write_sharedMem(self):
+        message = SharedMemLib.read_write_sharedMem(SharedMemLib.Mode.READ)
+        reward = 0
+        if message:
+            reward -= 15
+        return reward
 
     def reset(self):
         self.query_count = 0
-        self.plan = "bruteForce"
+        self.PasswordSpray = False
         self.state = self.default_state()
         
         self.indexUsrs = 0
@@ -201,8 +253,14 @@ class CustomEnv:
 if __name__ == "__main__":
     env = CustomEnv()
     num_episodes = 1000
-    max_steps_per_episode = 50
+    max_steps_per_episode = 100
     total_rewards = []
+    user_file = "../Data/usernames.txt"
+    password_file = "../Data/passwords.txt"
+    delimiter = None
+    users, passwords = env.read_user_list(user_file, delimiter)
+    if not passwords:
+        passwords = env.read_password_list(password_file)
 
     for episode in range(num_episodes):
         state = env.reset()

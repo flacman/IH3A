@@ -54,7 +54,8 @@ def parse_ossec_message(message):
             'message': remaining_message
         }
     else:
-        logging.error("OSSEC log does not match expected format.")
+        logging.error("OSSEC log does not match expected format.\n")
+        logging.error(f"{message}")
         return None
 
 # Function to parse a syslog message sent by Suricata and return a dictionary with the parsed fields
@@ -244,7 +245,7 @@ def main():
     finally:
         sock.close()
         message_queue.put(None)  # Signal the message handler to exit
-        message_queue.join()
+        exit(0)
 
 if __name__ == "__main__":
     main()
