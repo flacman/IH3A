@@ -24,7 +24,7 @@ MEM_BLOCK_SIZE = 1024
 class Mode(Enum):
     READ = 1
     WRITE = 2
-    
+
 # Function to read and write to shared memory
 # mode: Mode.READ or Mode.WRITE
 # toWrite: String to write to shared memory (only used in Mode.WRITE)
@@ -32,6 +32,7 @@ class Mode(Enum):
 # Note: This function is thread-safe, so it should be called with a thread
 def read_write_sharedMem(mode: Mode, toWrite: str = None):
     
+    mutex.acquire()
     try:
         shm_c = shared_memory.SharedMemory(MEM_BLOCK_NAME)
     except FileNotFoundError:
@@ -40,7 +41,7 @@ def read_write_sharedMem(mode: Mode, toWrite: str = None):
     return_value = None
     #for i in range(1000):
     # Acquire the semaphore lock
-    mutex.acquire()
+    
     if mode == Mode.READ:
         read_bytes = bytearray()
         while True:
@@ -49,7 +50,7 @@ def read_write_sharedMem(mode: Mode, toWrite: str = None):
             if b'\x00' in chunk:
                 break
         read_str = read_bytes.rstrip(b'\x00').decode('utf-8')
-        print(read_str)  # Example action, adjust as needed
+        #print(read_str)  # Example action, adjust as needed
         return_value = read_str
         #break
     elif mode == Mode.WRITE and toWrite is not None:
