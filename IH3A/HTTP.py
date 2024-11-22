@@ -1,5 +1,7 @@
 import requests
 import json
+#pip install requests-toolbelt
+from requests_toolbelt.adapters.source import SourceAddressAdapter
 
 class HTTPQuery:
     def __init__(self, host, default_headers=None, post_query="", path="", use_post=True, use_json=False):
@@ -38,6 +40,7 @@ class HTTPQuery:
         
         # Perform the HTTP request using a session to handle cookies
         session = requests.Session()
+        session.mount('http://', SourceAddressAdapter(ip))
         if self.use_post:
             if self.use_json:
                 response = session.post(url, headers=final_headers, json=json.loads(data), allow_redirects=True)
@@ -60,7 +63,7 @@ class HTTPQuery:
         return False, response.status_code, response.text
 
 
-    def perform_query(self, username="", password="", search_string=""):
+    def perform_query(self, username="", password="", search_string="", ip="0.0.0.0"):
         # Merge default headers with provided headers
         final_headers = self.default_headers.copy()
 
@@ -81,6 +84,7 @@ class HTTPQuery:
         
         # Perform the HTTP request using a session to handle cookies
         session = requests.Session()
+        session.mount('http://', SourceAddressAdapter(ip))
         if self.use_post:
             if self.use_json:
                 response = session.post(url, headers=final_headers, json=json.loads(data), allow_redirects=True)
@@ -105,13 +109,17 @@ class HTTPQuery:
         return False
 
 # Example usage:
-# http_query = HTTPQuery(
-#     host="http://example.com",
-#     default_headers={"Content-Type": "application/x-www-form-urlencoded"},
-#     post_query="username=${USER}&password=${PASS}",
-#     path="/login",
-#     use_post=True,
-#     use_json=False
-# )
-# result = http_query.perform_query(username="myuser", password="mypassword", search_string="Welcome")
-# print(result)  # True if "Welcome" is in the response or if an access token is set, False otherwise
+http_query = HTTPQuery(
+     host="http://192.168.16.146:8081",
+     default_headers={"Content-Type": "application/x-www-form-urlencoded"},
+     post_query="username=${USER}&password=${PASS}",
+     path="/login",
+     use_post=True,
+     use_json=False
+)
+ip = '192.168.16.1'
+
+result = http_query.perform_query(username="myuser", password="mypassword", search_string="Welcome", ip=ip)
+ip = '192.168.16.3'
+result = http_query.perform_query(username="myuser", password="mypassword", search_string="Welcome", ip=ip)
+print(result)  # True if "Welcome" is in the response or if an access token is set, False otherwise
