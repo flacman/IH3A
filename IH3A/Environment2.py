@@ -10,35 +10,38 @@ Change state:
 #Everything should be discretized using max 20 attempts as base
 
 state = { 
-#Number of attempts made by the agent for the current user in the last 5 seconds, Range: 0-10
-#10 max attempts in 5 seconds for purposes of state space
-'attempted_passwords_this_user': 2,
-#Number of attempts made by the agent in total, Range: 0-20
-#discretize to 20 attempts based on reward
-'num_attempts': 5, 
-#Time elapsed since the last attempt, Range: 0-10
-#max time between attempts is 10 deciseconds
-'elapsed_time': 5, # in deciseconds
-#Total time elapsed since the start of the episode, Range: 0- 29
-#'total_time': 30, # in minutes
-#The response code of the last attempt, Range: 0-10
-#200, 403, 500, 503, 301, 302, 400, 303, 304, 307, 308
-#'last_response_code': 403,
-#The last error message received, if any, Range: 0-10
-#Randomly select from a list of error messages or based on response code
-'error_messages': ["Forbidden"], 
-#Whether rate limiting is in effect/detected, Range: 0-1
-'rate_limiting': False, 
-#Whether lockout is in effect/detected, Range: 0-1
-'lockout_status': False,
-# Actual success rate based on "non-locked" attempts, Range: 0-1
-# 'success_rate': 0.0, 
-#Whether the agent is currently password spraying or other patters, Range: 0-1
-'patterns': {"password_spray": True}, 
-#The number of locks detected per minute
-# Discretized to 10 locks
-'total_locks': 0,
+    #Number of attempts made by the agent for the current user in the last 5 seconds, Range: 0-10
+    #10 max attempts in 5 seconds for purposes of state space
+    'attempted_passwords_this_user': 2,
+    #Number of attempts made by the agent in total, Range: 0-20
+    #discretize to 20 attempts based on reward
+    'num_attempts': 5, 
+    #Time elapsed since the last attempt, Range: 0-10
+    #max time between attempts is 10 deciseconds
+    'elapsed_time': 5, # in deciseconds
+    #Total time elapsed since the start of the episode, Range: 0- 29
+    #'total_time': 30, # in minutes
+    #The response code of the last attempt, Range: 0-10
+    #200, 403, 500, 503, 301, 302, 400, 303, 304, 307, 308
+    #'last_response_code': 403,
+    #The last error message received, if any, Range: 0-10
+    #Randomly select from a list of error messages or based on response code
+    'error_messages': ["Forbidden"], 
+    #Whether rate limiting is in effect/detected, Range: 0-1
+    'rate_limiting': False, 
+    #Whether lockout is in effect/detected, Range: 0-1
+    'lockout_status': False,
+    # Actual success rate based on "non-locked" attempts, Range: 0-1
+    # 'success_rate': 0.0, 
+    #Whether the agent is currently password spraying or other patters, Range: 0-1
+    'patterns': {"password_spray": True}, 
+    #The number of locks detected per minute
+    # Discretized to 10 locks
+    'total_locks': 0,
 }
+
+Deep Q-Learning
+PPO
 
 def hash_password(password): 
     return int(hashlib.md5(password.encode()).hexdigest(), 16) % 1000 
@@ -284,14 +287,14 @@ class CustomEnv:
         self.state = (self.query_count, self.PasswordSpray)
         #print(f"New state: {self.state}, Reward: {reward}, Done: {self.done}")
         return self.state, reward
-    
-    def change_traversal(self):
-        with self.lock:
-            self.PasswordSpray = not self.PasswordSpray
-            
+
     def state_to_index(self, state):
         index = state[0] * 2 + (0 if state[1] == False else 1)
         return index if index < 1000 else 999
+        
+    def change_traversal(self):
+        with self.lock:
+            self.PasswordSpray = not self.PasswordSpray
 
     def determine_reward_from_response(self, success, status_code, response_text):
         reward = 0
