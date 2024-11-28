@@ -210,7 +210,8 @@ class BruteForceEnv(gymnasium.Env):
             #reward -= 15 you'll get this anyways
         
         elif status_code == 403 or "blocked" in response_text.lower():
-            reward -= 10
+            #reward -= 10
+            reward -= 1
             print("Lockout detected (403).")
             self.state['error_messages'] = ErrorMessages.BLOCKED.value
             self.state['lockout_status'] = 1
@@ -219,7 +220,7 @@ class BruteForceEnv(gymnasium.Env):
         
         if success or status_code == 401:
             self.state['error_messages'] = ErrorMessages.NO_ERROR.value
-            reward += 3
+            reward += 1
         return reward
 
     def read_write_sharedMem(self):
@@ -263,7 +264,7 @@ class BruteForceEnv(gymnasium.Env):
             if(username is None or password is None):
                 self.done = True
                 print("All username-password pairs exhausted.")
-                return self.state, reward + 500, self.done, {}
+                return self.state, reward + 5000, self.done, {}
             with self.lock2:
                 success, status_code, response_text = self.http_query.perform_query(
                     username=username,
@@ -276,7 +277,7 @@ class BruteForceEnv(gymnasium.Env):
             self.state['num_attempts'] += 1
             #self.total_attempt_count += 1
             if success:
-                reward += 50
+                reward += 5000
                 self.done = True
                 print("Login successful!")
             else:
