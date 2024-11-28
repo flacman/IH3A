@@ -1,69 +1,33 @@
 import requests
 import json
-#pip install requests-toolbelt
-from requests_toolbelt.adapters.source import SourceAddressAdapter
+
+class SourceAddressAdapter(requests.adapters.HTTPAdapter):
+    def __init__(self, source_address, *args, **kwargs):
+        self.source_address = source_address
+        super(SourceAddressAdapter, self).__init__(*args, **kwargs)
+
+    def get_connection(self, url, proxies=None):
+        conn = super(SourceAddressAdapter, self).get_connection(url, proxies)
+        conn.source_address = (self.source_address, 0)
+        return conn
 
 class HTTPQuery:
-    def __init__(self, host, default_headers=None, post_query="", path="", use_post=True, use_json=False):
+    def __init__(self, host, path="", use_post=True, use_json=False, default_headers=None):
         self.host = host
-        self.default_headers = default_headers if default_headers else {}
-        self.post_query = post_query
         self.path = path
         self.use_post = use_post
         self.use_json = use_json
+        self.default_headers = default_headers if default_headers else {}
+        
+        self.ip_counter = 0
 
     def build_post_query(self, username, password):
         if self.use_json:
             return json.dumps({"username": username, "password": password})
         else:
             return f"username={username}&password={password}"
-    
-    #for the model, output whether or not we were able to login (success), the http status code and response text
-    def perform_query_verbose(self, username="", password="", search_string=""):
-        # Merge default headers with provided headers
-        final_headers = self.default_headers.copy()
 
-        # Build the post query
-        post_query = self.build_post_query(username, password)
-
-        # Construct the full URL
-        url = self.host
-        if self.path:
-            url = f"{self.host.rstrip('/')}/{self.path.lstrip('/')}"
-
-        data = post_query
-        # Determine the data to send based on use_json
-        if self.use_json:
-            final_headers['Content-Type'] = 'application/json'
-#        else:
-#            final_headers['Content-Type'] = 'application/x-www-form-urlencoded'
-        
-        # Perform the HTTP request using a session to handle cookies
-        session = requests.Session()
-        session.mount('http://', SourceAddressAdapter(ip))
-        if self.use_post:
-            if self.use_json:
-                response = session.post(url, headers=final_headers, json=json.loads(data), allow_redirects=True)
-            else:
-                response = session.post(url, headers=final_headers, data=data, allow_redirects=True)
-                    
-        else:
-            response = session.get(url, headers=final_headers, params=data, allow_redirects=True)
-
-        # status_code = response.status_code
-        # status_code = response.status_code
-        if search_string in response.text:
-            return True, response.status_code, response.text
-        try:
-            response_json = response.json()
-            if 'access_token' in response_json:
-                return True, response.status_code, response.text
-        except ValueError:
-            pass
-        return False, response.status_code, response.text
-
-
-    def perform_query(self, username="", password="", search_string="", ip="0.0.0.0"):
+    def perform_query(self, username="", password="", search_string="", ip="0.0.0.0", changeIP=False):
         # Merge default headers with provided headers
         final_headers = self.default_headers.copy()
 
@@ -81,16 +45,19 @@ class HTTPQuery:
             final_headers['Content-Type'] = 'application/json'
         else:
             data = post_query
+            final_headers['Content-Type'] = 'application/x-www-form-urlencoded'
         
         # Perform the HTTP request using a session to handle cookies
         session = requests.Session()
+
+
+
         session.mount('http://', SourceAddressAdapter(ip))
         if self.use_post:
             if self.use_json:
                 response = session.post(url, headers=final_headers, json=json.loads(data), allow_redirects=True)
             else:
                 response = session.post(url, headers=final_headers, data=data, allow_redirects=True)
-                    
         else:
             response = session.get(url, headers=final_headers, params=data, allow_redirects=True)
 
@@ -102,24 +69,23 @@ class HTTPQuery:
         try:
             response_json = response.json()
             if 'access_token' in response_json:
-                return True
+                return True, response.status_code, response.text
         except ValueError:
             pass
+        return False, response.status_code, response.text
+if __name__ == "__main__":
+    # Example usage:
+    http_query = HTTPQuery(
+        host="http://192.168.16.146:8081",
+        default_headers={"Content-Type": "application/x-www-form-urlencoded"},
+        post_query="username=${USER}&password=${PASS}",
+        path="/login",
+        use_post=True,
+        use_json=False
+    )
+    ip = '192.168.16.1'
 
-        return False
-
-# Example usage:
-http_query = HTTPQuery(
-     host="http://192.168.16.146:8081",
-     default_headers={"Content-Type": "application/x-www-form-urlencoded"},
-     post_query="username=${USER}&password=${PASS}",
-     path="/login",
-     use_post=True,
-     use_json=False
-)
-ip = '192.168.16.1'
-
-result = http_query.perform_query(username="myuser", password="mypassword", search_string="Welcome", ip=ip)
-ip = '192.168.16.3'
-result = http_query.perform_query(username="myuser", password="mypassword", search_string="Welcome", ip=ip)
-print(result)  # True if "Welcome" is in the response or if an access token is set, False otherwise
+    result = http_query.perform_query(username="myuser", password="mypassword", search_string="Welcome", ip=ip)
+    ip = '192.168.16.3'
+    result = http_query.perform_query(username="myuser", password="mypassword", search_string="Welcome", ip=ip)
+    print(result)  # True if "Welcome" is in the response or if an access token is set, False otherwise

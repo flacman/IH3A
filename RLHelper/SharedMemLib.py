@@ -9,16 +9,13 @@ import struct
 from multiprocessing import shared_memory, Lock
 from enum import Enum
 
-mutex = Lock()
-MEM_BLOCK_NAME = "shared_memory_block"
-MEM_BLOCK_SIZE = 1024
 
 class Mode(Enum):
     READ = 1
     WRITE = 2
 
 mutex = Lock()
-MEM_BLOCK_NAME = "shared_memory_block"
+MEM_BLOCK_NAME = "shared_memory_block1"
 MEM_BLOCK_SIZE = 1024
 
 class Mode(Enum):
@@ -36,6 +33,8 @@ def read_write_sharedMem(mode: Mode, toWrite: str = None):
         shm_c = shared_memory.SharedMemory(MEM_BLOCK_NAME)
     except FileNotFoundError:
         shm_c = shared_memory.SharedMemory(create=True, size=MEM_BLOCK_SIZE, name=MEM_BLOCK_NAME)
+    except:
+        return None
         
     return_value = None
     #for i in range(1000):

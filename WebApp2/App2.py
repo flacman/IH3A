@@ -4,6 +4,11 @@ from flask_mysqldb import MySQL
 import MySQLdb.cursors
 import hashlib
 import time
+# App2.py
+# The hardest App in the environment. It is a web application that requires a username and password to login.
+# A user is blocked after 5 failed login attempts within 5 minutes, even if it does not exist.
+# Use global counter for user, so it will be shared among all the sessions.
+
 
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'  # Change this to a random secret

@@ -1,4 +1,5 @@
 # SharedMemLib.py
+from random import random
 import threading
 import socketserver
 import sys
@@ -8,17 +9,13 @@ import os
 import struct
 from multiprocessing import shared_memory, Lock
 from enum import Enum
-
-mutex = Lock()
-MEM_BLOCK_NAME = "shared_memory_block"
-MEM_BLOCK_SIZE = 1024
-
 class Mode(Enum):
     READ = 1
     WRITE = 2
 
 mutex = Lock()
-MEM_BLOCK_NAME = "shared_memory_block"
+MEM_BLOCK_NAME1 = "shared_memory_block1"
+MEM_BLOCK_NAME2 = "shared_memory_block2"
 MEM_BLOCK_SIZE = 1024
 
 class Mode(Enum):
@@ -30,13 +27,15 @@ class Mode(Enum):
 # toWrite: String to write to shared memory (only used in Mode.WRITE)
 # Returns: String read from shared memory (only used in Mode.READ)
 # Note: This function is thread-safe, so it should be called with a thread
-def read_write_sharedMem(mode: Mode, toWrite: str = None):
-    
+def read_write_sharedMem(mode: Mode, toWrite: str = None, agentId: int = 0):
+    MEM_BLOCK_NAME = MEM_BLOCK_NAME1 if agentId == 1 else MEM_BLOCK_NAME2
     mutex.acquire()
     try:
         shm_c = shared_memory.SharedMemory(MEM_BLOCK_NAME)
     except FileNotFoundError:
         shm_c = shared_memory.SharedMemory(create=True, size=MEM_BLOCK_SIZE, name=MEM_BLOCK_NAME)
+    except FileExistsError:
+        return None
         
     return_value = None
     #for i in range(1000):

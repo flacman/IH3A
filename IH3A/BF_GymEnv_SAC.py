@@ -13,7 +13,7 @@ from gymnasium.envs.registration import register
 
 register(
     id='BruteForceEnv-v0',
-    entry_point='BF_GymEnv:BruteForceEnv',
+    entry_point='BF_GymEnv_SAC:BruteForceEnv',
 #    kwargs={'user_file': user_file, 'password_file': password_file, 'delimiter': delimiter, 'http_query': http_query_APP2}
 )
 
@@ -87,7 +87,7 @@ class BruteForceEnv(gymnasium.Env):
             'total_locks': spaces.Discrete(1000)  # Arbitrary large number
         })
         # Define the action space
-        self.action_space = spaces.Discrete(5)  # 5 sets of actions
+        self.action_space = spaces.Box(low=0, high=1, shape=(5,), dtype=np.float32)  # 5 continuous actions
 
         # Initialize the state
         self.state = {
@@ -231,8 +231,9 @@ class BruteForceEnv(gymnasium.Env):
         
         return reward
     
-    def step(self, action):
+    def step(self, action_ND):
         #print("Step: ", action)
+        action = np.argmax(action_ND)
         reward = 0
         self.maxEpisodeSteps -= 1
         # reset lockout status

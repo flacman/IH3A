@@ -66,7 +66,7 @@ def clear_user_table(cursor):
 
 def read_csv_file(csv_file):
     with open(csv_file, 'r') as file:
-        reader = csv.reader(file,delimiter=';')
+        reader = csv.reader(file,delimiter=',')
         rows = list(reader)
     return rows
 
@@ -97,6 +97,27 @@ def restart_database():
         conn.commit()
         cursor.close()
         conn.close()
+
+    return jsonify({"message": "Databases restarted and populated successfully"}), 200
+
+@app.route('/restart-database/<int:pool_number>', methods=['GET'])
+def restart_specific_database(pool_number):
+    if not csv_rows:
+        return jsonify({"error": "CSV data not loaded"}), 500
+
+    if pool_number == 1:
+        pool, config = pool_1, db_config_1
+    elif pool_number == 2:
+        pool, config = pool_2, db_config_2
+    else:
+        return jsonify({"error": "Invalid pool number"}), 400
+
+    init_db(pool, config)  # Initialize the database
+    with pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            clear_user_table(cursor)
+            populate_user_table(cursor, csv_rows)
+            conn.commit()
 
     return jsonify({"message": "Databases restarted and populated successfully"}), 200
 
