@@ -54,7 +54,8 @@ def init_db(pool, config):
         CREATE TABLE IF NOT EXISTS user (
             id INT AUTO_INCREMENT PRIMARY KEY,
             username VARCHAR(255) NOT NULL,
-            password_hash CHAR(40) NOT NULL
+            password_hash CHAR(40) NOT NULL,
+            failed_attampts INT DEFAULT 0
         )
     """)
     conn.commit()

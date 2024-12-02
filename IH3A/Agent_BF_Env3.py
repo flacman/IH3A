@@ -1,3 +1,4 @@
+import random
 from stable_baselines3 import PPO, A2C
 from stable_baselines3.common.callbacks import StopTrainingOnRewardThreshold, CallbackList, EvalCallback, BaseCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
@@ -109,7 +110,7 @@ class TensorboardCallback(BaseCallback):
 
 class IH3Agent:    
     total_rewards = []
-    user_file = "../Data/usernames.txt"
+    user_file = "../Data/200-usernames.txt"
     password_file = "../Data/100-passwords.txt"
     delimiter = None
     best_reward = -np.inf
@@ -118,7 +119,7 @@ class IH3Agent:
     indexPass_map = {}
 
     # Debug flag
-    debug_mode = True
+    debug_mode = False
 
     # Create the HTTPQuery object
     # Create the HTTPQuery object
@@ -132,10 +133,10 @@ class IH3Agent:
     )
         # Register the custom environment
     register(
-        id='BruteForceEnv-v0',
+        id='BruteForceEnv-v1',
         entry_point='BF_GymEnv:BruteForceEnv',
         max_episode_steps=5000,
-        kwargs={'users': users, 'passwords': passwords, 'http_query': http_query_APP3, 'agentId':1}
+        kwargs={'users': users, 'passwords': passwords, 'indexPass_map': indexPass_map, 'http_query': http_query_APP3, 'agentId':1}
     )
     def __init__(self):
         manager = Manager()
@@ -158,6 +159,7 @@ class IH3Agent:
                     self.passwords.append(password)
                 else:
                     self.users.append(line)
+        random.shuffle(self.users)
         return self.users, self.passwords
 
     # Function to read password list from a file
@@ -171,9 +173,9 @@ class IH3Agent:
     def make_env(self):
         
         if self.debug_mode:
-            return gymnasium.make('BruteForceEnv-v0')
+            return gymnasium.make('BruteForceEnv-v1', kwargs={'users': agent.users, 'passwords': agent.passwords, 'indexPass_map': agent.indexPass_map, 'http_query': agent.http_query_APP3, 'agentId':1})
         else:
-            return make_vec_env('BruteForceEnv-v0', n_envs=2, seed=0,env_kwargs={'users': agent.users, 'passwords': agent.passwords, 'indexPass_map': agent.indexPass_map, 'http_query': agent.http_query_APP3, 'agentId':1})
+            return make_vec_env('BruteForceEnv-v1', n_envs=1, seed=0,env_kwargs={'users': agent.users, 'passwords': agent.passwords, 'indexPass_map': agent.indexPass_map, 'http_query': agent.http_query_APP3, 'agentId':1})
 
 
 num_episodes = 10000
@@ -185,8 +187,8 @@ if __name__ == "__main__":
 
     print("CUDA available:", torch.cuda.is_available())
     
-    #device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
-    device = torch.device("cpu") 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+    #device = torch.device("cpu") 
     print("Using device:", device)
     
     agent = IH3Agent()
@@ -205,7 +207,7 @@ if __name__ == "__main__":
 
     # Create the callbacks
     eval_callback = EvalCallback(env, best_model_save_path='./logs/',
-                                 log_path='./logs/', eval_freq=500,
+                                 log_path='./logs/', eval_freq=1000,
                                  deterministic=True, render=False)
     #callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=500, verbose=1)
     tCallback = TensorboardCallback()

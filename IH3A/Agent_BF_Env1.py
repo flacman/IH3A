@@ -1,4 +1,4 @@
-from stable_baselines3 import PPO
+from stable_baselines3 import A2C, PPO
 from stable_baselines3.common.callbacks import StopTrainingOnRewardThreshold, CallbackList, EvalCallback, BaseCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
@@ -90,7 +90,7 @@ class TensorboardCallback(BaseCallback):
 
 class IH3Agent_App1:    
     total_rewards = []
-    user_file = "../Data/usernames.txt"
+    user_file = "../Data/200-usernames.txt"
     password_file = "../Data/passwords.txt"
     delimiter = None
     best_reward = -np.inf
@@ -190,7 +190,8 @@ if __name__ == "__main__":
 
     # Create the PPO model
     #model = PPO("MultiInputPolicy", env, verbose=1, tensorboard_log="./ppo_bruteforce_tensorboard/")
-    model = PPO(CustomMultiInputPolicy, env, verbose=1, tensorboard_log="./ppo_bruteforce_tensorboard/")
+    #model = PPO(CustomMultiInputPolicy, env, verbose=1, tensorboard_log="./ppo_bruteforce_tensorboard/")
+    model = A2C(CustomMultiInputPolicy, env, verbose=1, tensorboard_log="./ppo_bruteforce_tensorboard/")
     
 
     # Train the model with the callback

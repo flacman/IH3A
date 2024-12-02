@@ -61,6 +61,10 @@ def do_login():
     account = cursor.fetchone()
     loginattempts_key = 'login_attempts' + username
     blocktime_key = 'block_time' + username
+    if session.get(blocktime_key) is not None:
+        print("Blocked!")
+        return "errorUser is blocked. Please wait.", 403
+
     if account:
         session['username'] = username
         session.pop(loginattempts_key, None)  # Reset login attempts on successful login
@@ -70,9 +74,9 @@ def do_login():
         if blocktime_key not in session:
             session[blocktime_key] = time.time()
         elapsed_time = time.time() - session[blocktime_key]
-        if elapsed_time > 3:
-            session.pop(loginattempts_key, None)
-            session[blocktime_key] = time.time()
+        #if elapsed_time > 3:
+        #    session.pop(loginattempts_key, None)
+        #    session[blocktime_key] = time.time()
         
         if loginattempts_key not in session:
             session[loginattempts_key] = 0

@@ -63,7 +63,7 @@ class HTTPQuery:
 
         # Check if the search string is in the response content
         if search_string in response.text:
-            return True
+            return True, response.status_code, response.text
 
         # Check if an access token is set in the JSON response
         try:

@@ -2,6 +2,7 @@
 from gymnasium import spaces
 import gymnasium
 import numpy as np
+from Agent_BF_Env3 import IH3Agent
 from HTTP import HTTPQuery
 import threading
 import SharedMemLib
@@ -25,7 +26,7 @@ class ErrorMessages(Enum):
     OTHER = 4
 
 class BruteForceEnv(gymnasium.Env):
-    metadata = {"render_modes": ["human"], 'render_fps': 5}
+    metadata = {}
     def __init__(self, users, passwords, indexPass_map, max_num_steps=1000, http_query=None, agentId:int = 0):
         super(BruteForceEnv, self).__init__()
         self.agentId = agentId
@@ -38,7 +39,7 @@ class BruteForceEnv(gymnasium.Env):
         self.episode_reward = 0
         self.maxEpisodeSteps = max_num_steps
         self.maxEpisodeSteps_const = max_num_steps
-
+        self.start_time = time.time()
         # Agent variables
         self.PasswordSpray = False
         self.users = users
@@ -46,6 +47,7 @@ class BruteForceEnv(gymnasium.Env):
         self.indexUsrs = 0
         self.indexPass_map = indexPass_map
         self.undetected_attempt_count = 0
+        self.current_step = 0
         #self.total_attempt_count = 0
         self.last_action_time = time.time()
         self.action_2_time = 0  # Record the time in milliseconds
@@ -130,10 +132,11 @@ class BruteForceEnv(gymnasium.Env):
             else:
                 item1 = self.users[self.indexUsrs]    
                 item2 = self.passwords[self.indexPass_map[self.indexUsrs]]
-
+                self.indexPass_map[self.indexUsrs] += 1
+                self.indexUsrs += 1
                 if self.indexUsrs >= len(self.users):
                     self.indexUsrs = 0
-                    self.indexPass_map[self.indexUsrs] += 1
+                    #self.indexPass_map[self.indexUsrs] += 1
 
             #self.total_attempt_count += 1
             return item1, item2
@@ -165,7 +168,8 @@ class BruteForceEnv(gymnasium.Env):
                 'password_spray': 0,
                 'total_locks': 0
             }
-            self.start_time = time.time()
+        random.shuffle(self.users)
+        self.start_time = time.time()
         self.current_step = 0
         self.done = False
         self.indexPass_map = {i: 0 for i in range(len(self.users))}
@@ -218,9 +222,9 @@ class BruteForceEnv(gymnasium.Env):
             self.state['total_locks'] += 1
             time.sleep(self.time_penalty)
         
-        if success or status_code == 401:
+        elif success or status_code == 401:
             self.state['error_messages'] = ErrorMessages.NO_ERROR.value
-            reward += 1
+            reward += 0.1
         return reward
 
     def read_write_sharedMem(self):
@@ -254,7 +258,8 @@ class BruteForceEnv(gymnasium.Env):
         elif action == 1:
             #print("Action: Skip user")
             with self.lock:
-                self.users.append(self.users.pop(self.indexUsrs))
+                if self.indexUsrs < len(self.users):
+                    self.users.append(self.users.pop(self.indexUsrs))
             reward -= 0.1
             #self.indexUsrs += 1
         elif action == 2:
@@ -264,7 +269,8 @@ class BruteForceEnv(gymnasium.Env):
             if(username is None or password is None):
                 self.done = True
                 print("All username-password pairs exhausted.")
-                return self.state, reward + 5000, self.done, {}
+                
+                return self.state, reward + 50000, self.done, False,{}
             with self.lock2:
                 success, status_code, response_text = self.http_query.perform_query(
                     username=username,
@@ -277,7 +283,7 @@ class BruteForceEnv(gymnasium.Env):
             self.state['num_attempts'] += 1
             #self.total_attempt_count += 1
             if success:
-                reward += 5000
+                reward += 50000
                 self.done = True
                 print("Login successful!")
             else:
@@ -285,7 +291,7 @@ class BruteForceEnv(gymnasium.Env):
                 self.undetected_attempt_count += 1
                 #if 50 attempts are made, then reward += 5
                 if self.state['num_attempts'] % 25 == 0:
-                    reward += 20
+                    reward += 5
                 #print(f"Attempt failed without lockout. {self.undetected_attempt_count} undetected attempts.")
             self.action_2_time = time.time() * 1000  # Record the time in milliseconds
 
@@ -358,7 +364,10 @@ class BruteForceEnv(gymnasium.Env):
 
 # Example usage
 if __name__ == "__main__":
-    env = BruteForceEnv("example_string1", "example_string2")
+    agent = IH3Agent()
+    env = BruteForceEnv(users=agent.users, passwords=agent.passwords, indexPass_map=agent.indexPass_map, http_query=agent.http_query_APP3, agentId=1)
+    while True:
+        env.step(2);
     state = env.reset()
     print("Initial state:", state)
     action = env.action_space.sample()

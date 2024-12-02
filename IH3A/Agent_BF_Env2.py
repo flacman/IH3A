@@ -103,8 +103,8 @@ class TensorboardCallback(BaseCallback):
 
 class IH3Agent:    
     total_rewards = []
-    user_file = "../Data/usernames.txt"
-    password_file = "../Data/passwords.txt"
+    user_file = "../Data/200-usernames.txt"
+    password_file = "../Data/100-passwords.txt"
     delimiter = None
     best_reward = -np.inf
     users = []
@@ -116,7 +116,7 @@ class IH3Agent:
 
     # Create the HTTPQuery object
     http_query_APP2 = HTTPQuery(
-        host="http://192.168.16.147:8082",
+        host="http://192.168.16.146:8084",
         path="/login",
         use_post=True,
         use_json=True
@@ -162,9 +162,9 @@ class IH3Agent:
     def make_env(self):
         
         if self.debug_mode:
-            return gymnasium.make('BruteForceEnv-v0')
+            return gymnasium.make('BruteForceEnv-v0',kwargs={'users': agent.users, 'passwords': agent.passwords, 'indexPass_map': agent.indexPass_map, 'http_query': agent.http_query_APP2, 'agentId':2})
         else:
-            return make_vec_env('BruteForceEnv-v0', n_envs=2, seed=0,env_kwargs={'users': agent.users, 'passwords': agent.passwords, 'indexPass_map': agent.indexPass_map, 'http_query': agent.http_query_APP2, 'agentId':2})
+            return make_vec_env('BruteForceEnv-v0', n_envs=1, seed=0,env_kwargs={'users': agent.users, 'passwords': agent.passwords, 'indexPass_map': agent.indexPass_map, 'http_query': agent.http_query_APP2, 'agentId':2})
 
 
 num_episodes = 10000
@@ -200,8 +200,8 @@ if __name__ == "__main__":
     callback = CallbackList([eval_callback, tCallback])
 
     # Create the PPO model
-    #model = PPO(CustomMultiInputPolicy, env, verbose=1, tensorboard_log="./ppo_bruteforce_tensorboard/")
-    model = A2C(CustomMultiInputPolicy, env, verbose=1, tensorboard_log="./ppo_bruteforce_tensorboard/")
+    model = PPO(CustomMultiInputPolicy, env, verbose=1, tensorboard_log="./ppo_bruteforce_tensorboard/")
+    #model = A2C(CustomMultiInputPolicy, env, verbose=1, tensorboard_log="./ppo_bruteforce_tensorboard/")
     
 
     # Train the model with the callback
