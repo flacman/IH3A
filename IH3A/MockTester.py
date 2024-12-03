@@ -18,12 +18,10 @@ def simulate_failed_attempts_from_ips():
         
         # Try 3 failed login attempts from each IP address
         for attempt in range(1, 4):
-            ip = ip_addresses[attempt % 2]  # Alternate IP address (127.0.0.1, 169.233.154.8)
             print(f"Attempt {attempt} from IP {ip}...")
             response = requests.post(
                 BASE_URL, 
-                json={"username": username, "password": wrong_password}, 
-                headers={"X-Forwarded-For": ip}  # Simulate different IP using the header
+                json={"username": username, "password": wrong_password, "ip": ip}  # Include the IP in the JSON payload
             )
             
             if response.status_code == 403:
@@ -33,6 +31,7 @@ def simulate_failed_attempts_from_ips():
                 print(f"Response: {response.json()}")
             
             time.sleep(1)  # Adding a small delay between attempts to avoid too fast requests
+            # Use time around 0.5 to simulate blocking capabilities through IP
 
 # Simulate login attempt from an IP after blocking time expires
 def simulate_valid_attempt_after_block():
@@ -44,8 +43,7 @@ def simulate_valid_attempt_after_block():
     # Now try a valid login from the first IP (127.0.0.1)
     response = requests.post(
         BASE_URL, 
-        json={"username": username, "password": "password123"},  # Correct password
-        headers={"X-Forwarded-For": "127.0.0.1"}  # Using 127.0.0.1 as the IP after the block period
+        json={"username": username, "password": "password123", "ip": "127.0.0.1"}  # Correct password, Using 127.0.0.1 as the IP after the block period
     )
 
     if response.status_code == 200:
