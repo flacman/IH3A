@@ -5,8 +5,9 @@ import time
 BASE_URL = "http://127.0.0.1:9000/simulate"  # Replace with the correct URL if needed
 
 # Mock user credentials
-username = "test_user"
-wrong_password = "wrongpassword"  # Intentionally incorrect password
+username = "yakfly"
+wrong_password = "wrong"  # Intentionally incorrect password
+correct_password = "arbiters"  # Change if database reset
 
 # IP addresses to test
 ip_addresses = ["127.0.0.1", "169.233.154.8"]  # List of IPs to simulate requests from
@@ -43,7 +44,7 @@ def simulate_valid_attempt_after_block():
     # Now try a valid login from the first IP (127.0.0.1)
     response = requests.post(
         BASE_URL, 
-        json={"username": username, "password": "password123", "ip": "127.0.0.1"}  # Correct password, Using 127.0.0.1 as the IP after the block period
+        json={"username": username, "password": correct_password, "ip": "127.0.0.1"}  # Correct password, Using 127.0.0.1 as the IP after the block period
     )
 
     if response.status_code == 200:
